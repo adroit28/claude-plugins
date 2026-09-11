@@ -76,3 +76,28 @@ break it; the fix is confined to `scripts/extract/flipkart.js`.
 
 Automated access is against both sites' terms of service. This is built for
 personal, hand-triggered, low-volume use.
+
+## Troubleshooting
+
+**"The browser is already running for .../chrome-profile"**
+
+Two Claude sessions each start their own `chrome-devtools` MCP server, and both
+default to the same Chrome profile directory. The second one cannot launch.
+
+Fix it at the server, not in the skill — add `--isolated`, which gives every
+server instance a temporary profile that is cleaned up on exit:
+
+```json
+"chrome-devtools": {
+  "command": "npx",
+  "args": ["-y", "chrome-devtools-mcp@latest", "--isolated"],
+  "type": "stdio"
+}
+```
+
+Restart your sessions afterwards. The trade-off is that no cookies or logins
+persist between runs — irrelevant here, since searching needs no account.
+
+Do not fix this by killing Chrome or closing the browser after a search: the
+collision happens at launch, and killing it yanks the browser out from under
+whichever session legitimately holds it.

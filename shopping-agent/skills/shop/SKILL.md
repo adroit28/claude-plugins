@@ -22,6 +22,11 @@ claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest
 Do not attempt the search without it — every navigation will fail, and a wall
 of tool errors is a worse message than one clear sentence.
 
+If instead the error says *"The browser is already running for ... chrome-profile"*,
+another Claude session holds the shared Chrome profile. Tell the user to add
+`--isolated` to the server's args (see README > Troubleshooting) rather than
+killing the browser — that would break the other session mid-work.
+
 **1. Read the rules.** `cat "${CLAUDE_PROJECT_DIR}/shopping/rules.toml"` (seeded
 from the shipped defaults on first run — if it is missing, step 4 creates it).
 Note the category thresholds so you can explain what was applied.
