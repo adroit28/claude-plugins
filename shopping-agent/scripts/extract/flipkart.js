@@ -8,28 +8,29 @@
 // Verified 2026-09-12: 3 pages -> 120 rows, 91 unique ids.
 //
 // Flipkart ships hashed class names (CjyrHS, MKiFS6, ...) that change on every
-// redesign, so nothing anchors on them. Two stable footholds:
+// redesign, so nothing anchors on them. Stable footholds:
 //   * div[data-id]  — the product card wrapper
-//   * "4.3(1,234)"  — the rating badge's exact own-text shape
-// Scoping the rating to that badge matters: a naive innerText regex reads
-// "Bluetooth 5.3" as a 5.3-star rating.
+//   * a standalone "4.6" text node for the star rating
+//   * a standalone "26,123 Ratings & 1,903 Reviews" text node for the count
+// Re-anchored 2026-09-12: the rating and review count used to sit in one
+// combined "4.3(1,234)" node; Flipkart split them into separate nodes, which
+// silently zeroed every rating/review field (title/price/url still parsed
+// fine, masking the break until the numbers were checked directly).
 async () => {
   const PAGES = 5; // ← set from [search].pages in rules.toml
 
-  // The decimal is OPTIONAL: Flipkart prints a flat 4.0 as "4(14,844)".
-  // Requiring \d\.\d silently dropped every whole-star product, including the
-  // single best-reviewed item on page 1 (boAt Airdopes Alpha, 793,084 ratings).
-  const BADGE = /^([1-5](?:\.\d)?)\s*\(([\d,]+)\)$/;
+  // The decimal is OPTIONAL: Flipkart prints a flat 4.0 rating as just "4".
+  const RATING_RE = /^[1-5](?:\.\d)?$/;
+  const REVIEWS_RE = /^([\d,]+)\s+Rating/i;
   const num = (s) => (s ? parseInt(String(s).replace(/[^\d]/g, ''), 10) : null);
 
   const scrape = (root, page) =>
     [...root.querySelectorAll('div[data-id]')]
       .filter((c) => c.querySelector('a[href*="/p/itm"]'))
       .map((c) => {
-        const badge = [...c.querySelectorAll('div,span')]
-          .map((e) => e.textContent.trim())
-          .find((t) => BADGE.test(t));
-        const m = badge ? badge.match(BADGE) : null;
+        const texts = [...c.querySelectorAll('div,span')].map((e) => e.textContent.trim());
+        const ratingText = texts.find((t) => RATING_RE.test(t));
+        const reviewsText = texts.find((t) => REVIEWS_RE.test(t));
         const a = c.querySelector('a[href*="/p/itm"]');
         // The product name lives in the thumbnail's alt text, which is more
         // reliable than any text node on the card.
@@ -43,8 +44,8 @@ async () => {
           url: a ? new URL(a.getAttribute('href').split('?')[0], location.origin).href : null,
           image: img?.getAttribute('src') || null,
           price: num((text.match(/₹[\d,]+/) || [null])[0]),
-          rating: m ? parseFloat(m[1]) : null,
-          reviews: m ? num(m[2]) : null,
+          rating: ratingText ? parseFloat(ratingText) : null,
+          reviews: reviewsText ? num(reviewsText.match(REVIEWS_RE)[1]) : null,
           sponsored: /\bAd\b|Sponsored/i.test(text.slice(0, 120)),
         };
       });
