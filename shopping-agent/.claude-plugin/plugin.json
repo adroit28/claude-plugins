@@ -1,0 +1,19 @@
+{
+  "name": "shopping-agent",
+  "displayName": "Shopping Agent",
+  "version": "0.1.0",
+  "description": "Searches Amazon.in and Flipkart through a real browser, filters listings by per-site rating and review-count rules, and builds a ranked HTML catalog.",
+  "keywords": [
+    "shopping",
+    "amazon",
+    "flipkart",
+    "catalog"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "adroit28",
+    "email": "43991105+adroit28@users.noreply.github.com",
+    "url": "https://github.com/adroit28"
+  },
+  "repository": "https://github.com/adroit28/claude-plugins"
+}

@@ -1,0 +1,7 @@
+# Only shopping-agent is published for now. gmail-cleanup stays local —
+# drop this line and add a marketplace.json entry when it is ready to ship.
+gmail-cleanup/
+
+__pycache__/
+.DS_Store
+.tmp/

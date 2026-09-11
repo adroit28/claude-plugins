@@ -1,0 +1,75 @@
+# Shopping Agent — filter & ranking rules.
+#
+# This file SHIPS with the plugin. On first run it is copied into your data
+# directory; edit that copy (the skill prints the path) so that plugin updates
+# never clobber your tuning. TOML is used over YAML purely so the plugin has
+# zero pip dependencies — tomllib is in the stdlib.
+
+[defaults]
+min_rating = 4.0
+min_reviews = 500          # the single most effective junk filter
+exclude_sponsored = true
+max_results = 8            # per catalog, after cross-site dedupe
+# min_price / max_price: omit for no bound, or set an integer in rupees.
+
+# Per-category overrides, chosen by matching `keywords` against your query.
+# An unmatched query falls back to [defaults].
+[categories.electronics]
+keywords = ["earbuds", "headphones", "laptop", "monitor", "mouse", "keyboard", "ssd", "phone", "charger", "powerbank"]
+min_rating = 4.2
+min_reviews = 1000
+
+[categories.appliances]
+keywords = ["mixer", "grinder", "purifier", "vacuum", "microwave", "kettle", "iron", "fan"]
+min_rating = 4.1
+min_reviews = 750
+
+[categories.books]
+keywords = ["book", "novel", "paperback", "hardcover"]
+min_rating = 4.0
+min_reviews = 50           # books legitimately carry far fewer ratings
+
+[categories.grocery]
+keywords = ["atta", "rice", "oil", "coffee", "tea", "protein", "snack"]
+min_rating = 4.0
+min_reviews = 300
+
+# Per-storefront thresholds, applied AFTER any category match
+# (defaults -> category -> site, most specific wins).
+# The same star number means different things on each site, so one global
+# threshold either admits Flipkart junk or rejects everything it stocks.
+[sites.amazon]
+min_rating = 4.0
+min_reviews = 500
+
+[sites.flipkart]
+min_rating = 4.0
+min_reviews = 500
+
+[search]
+# How many result pages to read per site. Deeper is meaningfully better:
+# Amazon page 3 returned 25/25 rated cards versus 21/22 on page 1. Each page
+# is one navigation plus one extraction, so cost is roughly linear.
+pages = 5
+
+[ranking]
+# "site" keeps each storefront's own result order and interleaves the two
+# (Amazon #1, Flipkart #1, Amazon #2, ...). "score" sorts by the Bayesian
+# rating below instead. Site order is the default: it is what you would
+# see browsing the sites yourself, and their ranking encodes sales data
+# no star average can.
+order = "site"
+# Bayesian shrink pulls low-count ratings toward the prior mean, so a 5.0
+# with 3 reviews cannot outrank a 4.3 with 49,000.
+prior_mean = 3.9
+prior_weight = 800
+price_penalty = 0.15       # mild tiebreak toward cheaper; 0 disables
+
+[behaviour]
+relax_if_fewer_than = 3    # below this, the skill relaxes and retries
+
+[output]
+# Where catalogs are written. Leave commented to use <project>/shopping/catalogs/.
+# Set an absolute path if you run /shop from repos where a shopping/ folder
+# would be unwelcome.
+# dir = "~/Documents/shopping-catalogs"
