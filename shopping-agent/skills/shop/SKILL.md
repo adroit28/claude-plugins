@@ -11,6 +11,17 @@ that need taste.
 
 ## Steps
 
+**0. Confirm the browser is reachable.** Call `list_pages` from the
+`chrome-devtools` MCP server. If that tool is unavailable, stop immediately and
+tell the user this plugin cannot work without it, quoting the install command:
+
+```bash
+claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest
+```
+
+Do not attempt the search without it — every navigation will fail, and a wall
+of tool errors is a worse message than one clear sentence.
+
 **1. Read the rules.** `cat "${CLAUDE_PROJECT_DIR}/shopping/rules.toml"` (seeded
 from the shipped defaults on first run — if it is missing, step 4 creates it).
 Note the category thresholds so you can explain what was applied.

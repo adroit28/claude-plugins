@@ -13,9 +13,16 @@ signups). Headless scrapers get bot-checked. Driving your own Chrome via the
 on a residential IP. Measured on 2026-09-12, 56 listings came back across both
 sites with no CAPTCHA.
 
+## Scope: India only
+
+This targets **amazon.in** and **flipkart.com**, and parses rupee prices. It
+will not work against amazon.com or any non-Indian storefront without new
+extractors. Flipkart has no equivalent elsewhere.
+
 ## Requires
 
-- The `chrome-devtools` MCP server, with a Chrome instance running.
+- The `chrome-devtools` MCP server, with a Chrome instance running:
+  `claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest`
 - Python 3.11+ (`tomllib`). No pip install — stdlib only, deliberately.
 
 ## Skills
