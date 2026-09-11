@@ -101,3 +101,30 @@ persist between runs — irrelevant here, since searching needs no account.
 Do not fix this by killing Chrome or closing the browser after a search: the
 collision happens at launch, and killing it yanks the browser out from under
 whichever session legitimately holds it.
+
+**...but nothing is actually running**
+
+The same message appears when no browser exists at all. Chrome leaves
+`SingletonLock`, `SingletonCookie` and `SingletonSocket` behind in the profile
+after an unclean exit, and refuses to launch while they are there — even though
+the PID the lock names is long dead.
+
+Check whether the lock points at a live process:
+
+```bash
+P=~/.cache/chrome-devtools-mcp/chrome-profile
+readlink "$P/SingletonLock"          # ends in the owning PID
+ps aux | grep "[c]hrome-devtools-mcp/chrome-profile" | wc -l
+```
+
+Zero processes and a lock still present means it is stale. Delete the three
+symlinks; Chrome recreates them on the next launch:
+
+```bash
+rm -f "$P"/Singleton{Lock,Cookie,Socket}
+```
+
+Verify the PID first. If it *is* alive, this is the concurrency case above and
+`--isolated` is the fix — deleting a live lock invites two browsers to write to
+one profile and corrupt it. Running with `--isolated` avoids the stale-lock
+problem entirely, since each server gets a throwaway profile.
