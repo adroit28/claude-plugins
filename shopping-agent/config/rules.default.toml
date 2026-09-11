@@ -9,7 +9,7 @@
 min_rating = 4.0
 min_reviews = 500          # the single most effective junk filter
 exclude_sponsored = true
-max_results = 8            # per catalog, after cross-site dedupe
+max_results = 50          # upper bound only — you get min(50, products clearing the rules)
 # min_price / max_price: omit for no bound, or set an integer in rupees.
 
 # Per-category overrides, chosen by matching `keywords` against your query.

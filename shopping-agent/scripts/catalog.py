@@ -115,20 +115,59 @@ def score(p: dict, rank: dict, cheapest: float | None) -> float:
 
 
 def tokens(title: str) -> set[str]:
+    """Identity-bearing words. Short tokens are dropped EXCEPT numeric ones:
+    "4" in "AirPods 4" and "161" in "Airdopes 161" are the whole identity."""
     words = re.findall(r"[a-z0-9]+", title.lower())
-    return {w for w in words if w not in STOPWORDS and len(w) > 2}
+    return {w for w in words
+            if w not in STOPWORDS and (len(w) > 2 or any(c.isdigit() for c in w))}
+
+
+def numeric_tokens(t: set[str]) -> set[str]:
+    """Purely numeric tokens — model numbers and headline specs alike."""
+    return {w for w in t if w.isdigit()}
+
+
+def same_product(a: set[str], b: set[str], threshold: float = 0.55) -> bool:
+    """Decide whether two listings are the same product.
+
+    Two rules, in order:
+
+    1. If both titles contain numbers and share NONE of them, they are
+       different products. Airdopes 161 and 163 differ by a single token and
+       are otherwise word-for-word identical; nothing else separates them.
+       Sharing even one number (a spec both mention) is enough to pass.
+
+    2. Otherwise compare with the overlap coefficient — intersection over the
+       SMALLER set, not the union. Amazon titles are keyword-stuffed while
+       Flipkart's are terse, so Jaccard punishes a genuine match for the
+       verbosity of one side.
+
+    Tuned to prefer false negatives: listing one product twice is a much
+    cheaper mistake than collapsing distinct products into one card.
+    """
+    na, nb = numeric_tokens(a), numeric_tokens(b)
+    if na and nb and not (na & nb):
+        return False
+    smaller = min(len(a), len(b))
+    if smaller < 3:
+        return a == b
+    return len(a & b) / smaller >= threshold
 
 
 def dedupe(products: list[dict]) -> list[dict]:
-    """Collapse the same product listed on both sites into one card."""
+    """Collapse the same product listed on both sites into one card.
+
+    Each group is compared against the tokens of its REPRESENTATIVE, never a
+    growing union. Unioning made groups act as magnets: every product absorbed
+    widened the token set, so the next comparison matched more easily and one
+    card could swallow an entire catalog.
+    """
     groups: list[dict] = []
     for p in products:
         t = tokens(p["title"])
         for g in groups:
-            overlap = len(t & g["_tokens"]) / max(1, min(len(t), len(g["_tokens"])))
-            if overlap >= 0.6:
+            if same_product(t, g["_tokens"]):
                 g["also"].append(p)
-                g["_tokens"] |= t
                 break
         else:
             groups.append({**p, "also": [], "_tokens": t})
