@@ -1,13 +1,33 @@
 {
   "name": "adroit-plugins",
-  "owner": { "name": "adroit28" },
+  "owner": {
+    "name": "adroit28"
+  },
   "description": "Personal Claude Code plugins.",
   "plugins": [
     {
       "name": "shopping-agent",
       "source": "./shopping-agent",
       "description": "Searches Amazon.in and Flipkart through a real browser, filters listings by per-site rating and review-count rules, and builds a ranked HTML catalog.",
-      "keywords": ["shopping", "amazon", "flipkart", "catalog"]
+      "keywords": [
+        "shopping",
+        "amazon",
+        "flipkart",
+        "catalog"
+      ]
+    },
+    {
+      "name": "yt-insights",
+      "source": "./yt-insights",
+      "description": "Read-only YouTube channel analytics: ranked HTML report with retention curves and experiment tracking from the Data and Analytics APIs, Studio CSV merge, plus title/description drafting in the channel's own voice.",
+      "keywords": [
+        "youtube",
+        "analytics",
+        "shorts",
+        "retention",
+        "experiments",
+        "metadata"
+      ]
     }
   ]
 }

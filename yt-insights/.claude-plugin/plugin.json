@@ -1,0 +1,14 @@
+{
+  "name": "yt-insights",
+  "version": "0.2.0",
+  "description": "Read-only YouTube channel analytics: pulls every upload with Analytics API metrics and retention curves, merges Studio CSV exports, builds a ranked HTML report, tracks paired upload experiments, and drafts titles, descriptions and hashtags in the channel's own voice.",
+  "author": {
+    "name": "adroit28"
+  },
+  "keywords": [
+    "youtube",
+    "analytics",
+    "shorts",
+    "metadata"
+  ]
+}
