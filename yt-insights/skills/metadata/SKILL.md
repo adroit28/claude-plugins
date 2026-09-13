@@ -39,6 +39,26 @@ Write `${CLAUDE_PROJECT_DIR}/yt-insights/drafts/<slug>-<date>.md` and echo it in
 - **Hashtags** — the fixed stack plus one or two specific tags, 4-6 total.
 - **Pinned comment** — one line, a question that invites a take.
 - **Posting slot** — the next best day and hour in IST from `style.md`.
+- **Music** — a shortlist of three to six sounds in tiers (trending in the
+  clip's genre, roast or mood texture, one Indian meme audio for the
+  audience). Trending audio is not in any YouTube API, so build this from
+  web search on the day: query "trending sounds YouTube Shorts <month year>",
+  "<genre> edits trending sounds <year>" and a TikTok tracker such as
+  tokchart or Buffer's monthly list. If the user has voice commentary,
+  shortlist instrumental or near-instrumental tracks only and say to keep
+  the bed low. Always: pick the version in the Shorts "Add sound" library
+  (licensed, and it lands the video on the sound page), prefer sounds with
+  tens of thousands of uses over millions, and tell the user the final check
+  is the in-app Shorts Trends page. Date the list.
+- **Thumbnail ideas** — three concepts in a table: frame to freeze, headline
+  (two lines max, one to three words each, punch word first), sub-line of
+  four words or fewer, emoji, style preset (`roast`, `hype`, `sad`, `neutral`),
+  and why. The thumbnail names the moment, the title gives the take; never the
+  same words. Mark your pick. Point the user at `/yt-insights:thumbnail` to
+  render it at exact 9:16 from text alone or over a frame they supply.
+- **On-screen captions** — if the user asks for captions, five or six
+  overlays of six words or fewer, one per beat, placed in the top third of
+  the frame, the last one cutting back to the opening beat so the Short loops.
 - **Warnings** — if the clip is over 35 seconds, a question title was
   requested, or the idea is fee-debate framing, say so plainly and offer the
   nearest alternative. Draft anyway; the call is theirs.
@@ -50,4 +70,4 @@ Write `${CLAUDE_PROJECT_DIR}/yt-insights/drafts/<slug>-<date>.md` and echo it in
 - Search-term spellings matter: if the analytics show `satpaev` and `satpayev`
   both being searched, put the common spelling in the title and the other in
   the description.
-- No writes to YouTube. The user pastes the text into Studio themselves.
+- This skill does not write to YouTube. The user pastes the text into Studio, or asks for `/yt-insights:publish` to apply a specific field to an uploaded video.

@@ -1,7 +1,7 @@
 {
   "name": "yt-insights",
-  "version": "0.2.0",
-  "description": "Read-only YouTube channel analytics: pulls every upload with Analytics API metrics and retention curves, merges Studio CSV exports, builds a ranked HTML report, tracks paired upload experiments, and drafts titles, descriptions and hashtags in the channel's own voice.",
+  "version": "0.4.0",
+  "description": "YouTube channel analytics and upload tooling: pulls every upload with Analytics API metrics and retention curves, merges Studio CSV exports, builds a ranked HTML report, tracks paired upload experiments, drafts titles, descriptions, hashtags, captions and music picks in the channel's own voice, and renders exact 9:16 Shorts thumbnails, and pushes a thumbnail, metadata or captions to an uploaded video on request (separate write token, dry run by default).",
   "author": {
     "name": "adroit28"
   },
@@ -9,6 +9,8 @@
     "youtube",
     "analytics",
     "shorts",
-    "metadata"
+    "metadata",
+    "thumbnail",
+    "publish"
   ]
 }

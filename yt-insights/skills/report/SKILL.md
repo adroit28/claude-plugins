@@ -103,5 +103,5 @@ change what the user should do next. Numbers go in a short table, not prose.
 - **Impressions and click-through rate are not in the API.** If the user asks
   about CTR or thumbnails, say the number lives only in Studio and ask them
   to export the CSV; do not estimate it.
-- **Never write to YouTube.** The token is read-only by design. If the user
+- **Never write to YouTube from this skill.** Its token is read-only by design. If the user
   asks to change a title, hand them the text to paste.

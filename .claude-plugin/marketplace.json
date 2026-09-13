@@ -19,14 +19,16 @@
     {
       "name": "yt-insights",
       "source": "./yt-insights",
-      "description": "Read-only YouTube channel analytics: ranked HTML report with retention curves and experiment tracking from the Data and Analytics APIs, Studio CSV merge, plus title/description drafting in the channel's own voice.",
+      "description": "YouTube channel analytics and upload tooling: ranked HTML report with retention curves and experiment tracking from the Data and Analytics APIs, Studio CSV merge, title/description/captions/music drafting in the channel's own voice, exact 9:16 Shorts thumbnails with photo cutouts, and an opt-in publish skill that sets a thumbnail, metadata or captions on an uploaded video through a separate write token.",
       "keywords": [
         "youtube",
         "analytics",
         "shorts",
         "retention",
         "experiments",
-        "metadata"
+        "metadata",
+        "thumbnail",
+        "publish"
       ]
     }
   ]
