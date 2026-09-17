@@ -22,9 +22,17 @@ Everything user-facing lives in `<project>/yt-insights/`: `secrets/`, `data/`, `
 
 While the app stays in Testing status the refresh token expires every 7 days and the fetch script reopens the browser for you. To stop that, fill in the Branding page (homepage and privacy URLs can be any HTTPS page you control) and click Publish app; no verification submission is needed.
 
-## Studio export (optional)
+## Studio export (optional, automatable)
 
-Impressions, click-through rate and the Shorts viewed-vs-swiped rate exist only in YouTube Studio. In Studio go to Analytics → Content → Advanced mode → Export (CSV), drop the file in `<project>/yt-insights/studio/`, and the next report run merges it per video. Column names are matched loosely, so any locale works.
+Impressions, click-through rate and the Shorts "stayed to watch" rate exist only in YouTube Studio. The report skill gets them in one of three ways, in order: a CSV already in `<project>/yt-insights/studio/` from the last 7 days; an export it performs itself in your signed-in Chrome; or a manual export you drop in the folder (Studio → Analytics → Content → Advanced mode → Export current view → CSV). Column names are matched loosely, so any locale works.
+
+To enable the automatic export, register a second browser tool that attaches to your own Chrome instead of launching an isolated one. The default `chrome-devtools` tool stays isolated for everything else; Google refuses sign-in inside it, which is why a second tool is needed.
+
+```bash
+claude mcp add chrome-studio -s user -- npx -y chrome-devtools-mcp@latest --autoConnect
+```
+
+Then in Chrome (version 144 or later) open `chrome://inspect/#remote-debugging`, turn on "Allow remote debugging", and restart the Claude Code session. `scripts/studio_export.py check` tells you whether the connection is ready. The tool drives your real browser with your real logins, so leave it out if you would rather export by hand. Never give the assistant your Google password; it does not need it and Google would block the login anyway.
 
 ## Data the report uses
 

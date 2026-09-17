@@ -43,13 +43,43 @@ opened. Tell the user to complete the Google sign-in (Advanced → Go to app →
 tick all scopes) and wait; the script continues on its own. This happens
 every 7 days while the Cloud app is in Testing status.
 
-**1b. Studio export, if any.** If `${CLAUDE_PROJECT_DIR}/yt-insights/studio/` contains CSV
-files, import them; this is the only source of impressions, click-through rate and
-the Shorts viewed-vs-swiped rate.
+**1b. Studio export.** Impressions, click-through rate and the Shorts
+"stayed to watch" rate exist only in YouTube Studio. Work down this list and
+stop at the first tier that succeeds.
+
+- **Tier 1, already exported.** If `${CLAUDE_PROJECT_DIR}/yt-insights/studio/`
+  has a CSV modified in the last 7 days, import it and move on.
+- **Tier 2, pull it from the user's signed-in Chrome.** Use the `chrome-studio`
+  MCP tools (`mcp__chrome-studio__*`), never the isolated `chrome-devtools`
+  browser: Google blocks sign-in there. Steps:
+  1. `studio_export.py check` (below). If it prints `NOT_READY`, show its
+     message and drop to Tier 3.
+  2. `studio_export.py url` prints the Advanced-mode URL. Open it with
+     `mcp__chrome-studio__new_page` (a 10 s navigation timeout is normal;
+     the tab still loads, find it with `list_pages`).
+  3. Take a snapshot, click the button named "Export current view", then run
+     `evaluate_script` with
+     `() => { const el=[...document.querySelectorAll('tp-yt-paper-item,[role=menuitem]')].find(e=>e.offsetParent!==null && e.innerText.trim().startsWith('Comma-separated')); el.click(); return !!el; }`
+  4. `studio_export.py ingest` finds the new `Content …zip` in `~/Downloads`,
+     copies `Table data.csv` into `studio/` and runs the importer.
+  If any `chrome-studio` call fails to connect, say so in one line, give the
+  remote-debugging instruction from `check`, and drop to Tier 3. Do not
+  retry with the isolated browser and never ask for Google credentials.
+- **Tier 3, ask.** Tell the user: Studio → Analytics → Content → Advanced
+  mode → Export current view → CSV, drop the file in `yt-insights/studio/`,
+  and continue the report without Studio columns. Say plainly which
+  findings are missing because of it.
 
 ```bash
+"${CLAUDE_PROJECT_DIR}/yt-insights/.venv/bin/python" "${CLAUDE_PLUGIN_ROOT}/scripts/studio_export.py" check --project-dir "${CLAUDE_PROJECT_DIR}"
+"${CLAUDE_PROJECT_DIR}/yt-insights/.venv/bin/python" "${CLAUDE_PLUGIN_ROOT}/scripts/studio_export.py" url --project-dir "${CLAUDE_PROJECT_DIR}"
+"${CLAUDE_PROJECT_DIR}/yt-insights/.venv/bin/python" "${CLAUDE_PLUGIN_ROOT}/scripts/studio_export.py" ingest --project-dir "${CLAUDE_PROJECT_DIR}"
 "${CLAUDE_PROJECT_DIR}/yt-insights/.venv/bin/python" "${CLAUDE_PLUGIN_ROOT}/scripts/studio.py" --project-dir "${CLAUDE_PROJECT_DIR}"
 ```
+
+The export covers the last 7 full days and excludes today. The CSV's
+"Stayed to watch (%)" column is the feed's verdict on a Short: above 50%
+travels, under 30% stalls. Write about it before retention when it exists.
 
 **2. Summarize.** Read the printed digest carefully; it is the whole evidence base.
 
