@@ -1,0 +1,19 @@
+{
+  "name": "ai-catchup",
+  "version": "1.0.0",
+  "description": "Finds what changed recently across Claude, Claude Code, OpenAI and Gemini, explains one thing at a time in plain language with sources, and keeps one markdown note per topic so nothing is re-explained twice. Runs on demand or unattended on a daily schedule, emailing the full note plus a cost and token report.",
+  "author": {
+    "name": "adroit28"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "openai",
+    "gemini",
+    "changelog",
+    "learning",
+    "email"
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/adroit28/claude-plugins"
+}

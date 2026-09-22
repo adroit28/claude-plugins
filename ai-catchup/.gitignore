@@ -1,0 +1,11 @@
+# Credentials and run data never live here; they are in ~/.config/ai-catchup/.
+# Belt and braces for the day this folder is published as a plugin.
+oauth_client.json
+client_secret*.json
+token.json
+config.json
+runs.csv
+logs/
+.venv/
+__pycache__/
+.DS_Store
