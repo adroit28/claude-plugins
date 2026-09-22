@@ -9,8 +9,14 @@ Find what changed recently across Claude, Claude Code, OpenAI and Gemini, explai
 one thing at a time properly, and keep a note per topic so the learning sticks.
 
 The reader is the user, who is keeping up for their own understanding. They use
-Claude Code daily. Write for a sharp practitioner, not a beginner and not a
-marketing audience.
+Claude Code daily, so they are comfortable with tools in general, but treat
+them as new to the *specific* mechanism a note explains — most of these
+topics really are things nobody has explained to them before. Write so
+someone with very little background in that one thing can follow every
+sentence: define a term the first time it appears, reach for a concrete
+analogy before the mechanics, and never assume the reader already knows why
+something exists. Not a beginner's guide to computing, and not a marketing
+audience either — no hype, no padding, just nothing left unexplained.
 
 ## Paths
 
@@ -45,13 +51,21 @@ Never write user content inside the skill directory.
 - **Sources for facts, your own words for the explanation.** Verification
   says what is true; it does not say how to teach it. Do not stitch notes
   together out of quotations. Read the sources, understand the mechanism,
-  then explain it the way you would to a sharp colleague: plain sentences,
-  an analogy or mental model where one helps, a comparison to something the
-  user already uses, a "the gist is" line before the detail. Quote a source
-  only when the exact wording matters, such as a command, an error message,
-  a limit, or a vendor claim you want to attribute rather than endorse. Draw
-  on your general understanding of how these systems work to make the new
-  thing click; just do not use it to assert facts about the new thing.
+  then explain it the way you would to a smart friend who has never touched
+  this specific feature before: plain sentences, an analogy or mental model
+  before the mechanics, a comparison to something the user already uses, a
+  "the gist is" line before the detail. Name the problem the thing solves
+  before naming the thing, since a solution means nothing without the gap it
+  closes. Quote a source only when the exact wording matters, such as a
+  command, an error message, a limit, or a vendor claim you want to
+  attribute rather than endorse. Draw on your general understanding of how
+  these systems work to make the new thing click; just do not use it to
+  assert facts about the new thing.
+- **No unexplained jargon.** The first time a note uses a term the reader
+  would not already know — a protocol name, an internal component, a
+  pattern's name — say what it is in the same sentence or the one after.
+  A reader should never have to already know what MCP, a token, a sandbox,
+  or a schema is to follow the explanation of something built on top of it.
 - **Official first, community second.** Docs, changelogs and vendor blogs
   establish what a thing is. Hacker News, Reddit, Simon Willison and similar
   establish why people care and where it breaks. Label which is which.
@@ -159,10 +173,12 @@ Do not spend more than a handful of fetches on one topic.
 ### 3. Write the note
 
 Copy the shape in `references/note-template.md` exactly. Fill every heading.
-Keep the whole note under about 120 lines. Concrete beats abstract: a real
-command, a real config snippet, a real request body, taken from the source.
-Where a vendor equivalent exists, name it in "How it compares" with one line
-each; do not pad that section when there is no equivalent.
+Keep the whole note under about 140 lines — the extra room over a denser
+write-up goes to the analogy and the plain-terms explanation, not to padding.
+Concrete beats abstract: a real command, a real config snippet, a real
+request body, taken from the source. Where a vendor equivalent exists, name
+it in "How it compares" with one line each; do not pad that section when
+there is no equivalent.
 
 Slug: lowercase, hyphens, the shortest thing a person would type to find it
 again, for example `claude-code-hooks-v2`, `gpt-5-responses-api`,
@@ -306,10 +322,14 @@ never ambiguous.
 
 ## Quality bar for a note
 
-A good note lets the user, a week later, re-explain the thing to a colleague
-without opening the source, and holds every follow-up they have asked since,
-so the file is the full record of what they know about the topic. It reads
-like a good explainer written by someone who understood the thing, not like
-a digest of quotations, while still being traceable to its sources. That means it says what changed relative to
-before, shows one working example, names the limits, and separates what the
-vendor claims from what users have observed.
+A good note lets the user, a week later, re-explain the thing to someone who
+has never heard of it, without opening the source, and holds every follow-up
+they have asked since, so the file is the full record of what they know
+about the topic. It reads like a good explainer written by someone who
+understood the thing and wants a newcomer to get it too, not like a digest
+of quotations aimed at someone who already knows the field. That means it
+names the problem before the solution, explains the idea in plain terms
+before the mechanics, defines every term on first use, shows one working
+example, names the limits, and separates what the vendor claims from what
+users have observed. If a note only makes sense to someone who already knew
+the topic's neighbourhood, it has not cleared the bar.
