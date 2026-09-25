@@ -1,0 +1,19 @@
+{
+  "name": "football-shorts",
+  "version": "1.1.0",
+  "description": "Find this week's viral football moments with verified sources, turn one into a 9:16 YouTube Short with ffmpeg + Pillow from one or many source files, and revise it from numbered feedback.",
+  "author": {
+    "name": "adroit28"
+  },
+  "keywords": [
+    "youtube",
+    "shorts",
+    "football",
+    "ffmpeg",
+    "yt-dlp",
+    "trends",
+    "video-editing"
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/adroit28/claude-plugins"
+}

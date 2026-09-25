@@ -1,0 +1,19 @@
+{
+  "name": "higgsfield-video",
+  "version": "0.1.0",
+  "description": "Turns a theme and an idea into a production-ready multi-shot video brief for Kling 3.0 on Higgsfield: fact-checks any real-world claims with sources, writes per-shot prompts that respect the Custom multi-shot limits (3 s minimum per shot, 5 shots, 15 s total, per-shot character budget with Element chips), assigns Elements and voices per shot, and emits a settings checklist plus a single-box Auto fallback. API generation is scaffolded for later.",
+  "author": {
+    "name": "adroit28"
+  },
+  "keywords": [
+    "higgsfield",
+    "kling",
+    "video",
+    "multi-shot",
+    "prompt",
+    "script",
+    "fact-check"
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/adroit28/claude-plugins"
+}
