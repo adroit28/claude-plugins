@@ -1,0 +1,17 @@
+{
+  "name": "gemini-image",
+  "version": "0.1.0",
+  "description": "Generates one image per request with the Gemini image API (gemini-3.1-flash-image): text-to-image or image-to-image edits from reference photos. Asks where to save every single time and never overwrites without asking.",
+  "author": {
+    "name": "adroit28"
+  },
+  "keywords": [
+    "gemini",
+    "image",
+    "image-generation",
+    "nano-banana",
+    "edit"
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/adroit28/claude-plugins"
+}

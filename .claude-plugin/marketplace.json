@@ -71,6 +71,17 @@
         "trends",
         "video-editing"
       ]
+    },
+    {
+      "name": "gemini-image",
+      "source": "./gemini-image",
+      "description": "Generates or edits one image per request with the Gemini image API, asking where to save every time and never overwriting without asking.",
+      "keywords": [
+        "gemini",
+        "image",
+        "image-generation",
+        "edit"
+      ]
     }
   ]
 }
