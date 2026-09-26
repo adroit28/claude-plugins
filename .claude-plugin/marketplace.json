@@ -82,6 +82,19 @@
         "image-generation",
         "edit"
       ]
+    },
+    {
+      "name": "gemini-cost",
+      "source": "./gemini-cost",
+      "description": "Checks Google AI Studio / Gemini API usage and billing for a project through the user's signed-in browser: requests and tokens per model, cost before and after credits, Developer Program credit remaining, prepaid balance, and rate-limit tier. Read-only, no API key or stored credential of any kind.",
+      "keywords": [
+        "gemini",
+        "ai-studio",
+        "billing",
+        "cost",
+        "credits",
+        "cloud-console"
+      ]
     }
   ]
 }

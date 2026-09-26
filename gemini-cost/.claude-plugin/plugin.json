@@ -1,0 +1,18 @@
+{
+  "name": "gemini-cost",
+  "version": "0.1.0",
+  "description": "Checks Google AI Studio / Gemini API usage and billing for a project through the user's signed-in browser: requests and tokens per model, cost before and after credits, Developer Program credit remaining, prepaid balance, and rate-limit tier. Read-only — never touches settings, budgets, keys or payment methods, and never calls the Gemini generative API. Uses no API key or stored credential of any kind.",
+  "author": {
+    "name": "adroit28"
+  },
+  "keywords": [
+    "gemini",
+    "ai-studio",
+    "billing",
+    "cost",
+    "credits",
+    "cloud-console"
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/adroit28/claude-plugins"
+}
