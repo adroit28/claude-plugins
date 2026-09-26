@@ -43,6 +43,28 @@ encoding and prints a WARN if any is off; never hand over a render that warned.
 
 `vf` appends extra filters after the crop (e.g. `"eq=contrast=1.1"`). `label` shows in the timeline and on check sheets; always set it.
 
+### Fill (letterboxed or landscape sources)
+
+```json
+"fill": {"box": [478, 302, 0, 274], "cy": 0.47, "dark": 0.12, "blur": 6}
+```
+Spec-level (every segment) or per segment; `"fill": false` on a segment turns it off. `box` is the picture
+inside the bars (`enhance/scripts/analyse.py` prints it). A blurred, slightly darkened copy of the box fills
+the 9:16 frame and the foreground (the segment's `crop`, default the whole box) is scaled to the full width
+and centred at `cy` × height. A narrower crop inside the box = a bigger foreground: full box width for wide
+shots, about 300 of 478 px for a face. `split` halves ignore fill. Keep `dark` low (0.1–0.2): 0.4 turns a
+green pitch into black bars again.
+
+### Effects on any segment (timed in output seconds of that segment)
+
+| field | form | notes |
+|---|---|---|
+| `zoom` | `1.15` or `{"from":1,"to":1.15,"at":0,"dur":null,"cx":0.5,"cy":0.5,"ease":"out"}` | push-in over the segment (`dur` null = to the end); a punch is `{"to":1.15,"dur":0.15}`. Not on `still`/`card`, whose `zoom` is the zoompan amount. |
+| `shake` | `0.3` or `{"at":0,"dur":0.35,"amp":14}` | decaying camera shake for impacts and freezes |
+| `flash` | `0.1` | fade in from white at the start of the segment; ignored on segment 0 (frame 0 is the scroll thumbnail) |
+
+Sources without an audio track are handled: their segments get silence, so the bed and hits carry the sound.
+
 ## Overlays (captions drawn by Pillow, shown between `from` and `to` seconds)
 
 ```json
@@ -54,7 +76,10 @@ encoding and prints a WARN if any is off; never hand over a render that warned.
  "png": "build/custom.png"}
 ```
 `big` = Impact, white, black stroke; `small` = Arial Bold, yellow. Lines auto-shrink to fit
-the width. `extra` places any number of blocks at a given y. `png` uses a ready
+the width. `extra` places any number of blocks at a given y; a block may add `"bg": "#111111"` (rounded
+badge behind it, `pad` 18) and `"emoji": "❌"` (drawn inline after the last line, text + emoji centred
+together, so it never collides): `{"lines": ["MISS #2"], "y": 1390, "size": 90, "bg": "#111111", "emoji": "❌"}`.
+Emoji do not render inside Impact/Arial text; use `emoji` fields. `png` uses a ready
 1080×1920 RGBA image instead. Overlays may overlap in time; later ones draw on top.
 
 Safe zones on a Short: keep text out of the top 250 px (progress bar, channel row)
@@ -67,13 +92,15 @@ the caption zone and is only for a last frame.
 ```json
 {"clip_volume": 0.9,
  "bed": {"src": "por", "ss": 296, "volume": 0.22, "fade_out": 2.5},
- "hits": [{"at": 8.16, "volume": 0.9, "freq": 48, "dur": 0.6}],
+ "hits": [{"at": 8.16, "volume": 0.9, "freq": 48, "dur": 0.6}, {"at": 5.2, "kind": "whoosh", "volume": 0.5}],
  "loudnorm": "I=-14:TP=-1.5:LRA=11"}
 ```
 `bed` is a continuous track under the cuts: either `src` (a source key, e.g. crowd
 noise from a quiet part of the match) or `file` (a music file the user supplied and
-holds rights to). `hits` are synthesised bass thumps at exact seconds, for freezes
-and reveals. `loudnorm` is applied last; `false` disables it. Segments made with
+holds rights to). `hits` are synthesised sounds at exact seconds (no sample files to license), by `kind`:
+`bass` (default thump, `freq` 48, `dur` 0.6) for freezes and reveals; `whoosh` (0.45 s noise swell, start it
+0.3 s before a cut); `riser` (rising tone, `dur` 1.5–2.5 s ending on the payoff); `ding` (counter / verdict);
+`tick` (tiny click). `loudnorm` is applied last; `false` disables it. Segments made with
 `speed`, `slowmo`, `boomerang`, `still`, `card` are silent, so the bed carries them.
 
 ## Versioning

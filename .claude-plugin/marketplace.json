@@ -61,7 +61,7 @@
     {
       "name": "football-shorts",
       "source": "./football-shorts",
-      "description": "Research this week's viral football moments with verified sources, build a 9:16 Short from them with ffmpeg + Pillow, and revise it from numbered feedback.",
+      "description": "Research this week's viral football moments with verified sources, build a 9:16 Short from them with ffmpeg + Pillow, enhance a video you already have (hooks, counters, slow-mo, punch-ins, synthesised SFX, blurred-fill layout), and revise from numbered feedback.",
       "keywords": [
         "youtube",
         "shorts",

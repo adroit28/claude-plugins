@@ -1,23 +1,44 @@
 #!/usr/bin/env python3
 """Verify a rendered Short before handing it over.
 
-  check.py <out.mp4> [--every 0.5] [--at 3.3 5.0] [--timeline build/timeline_v2.json]
+  check.py <out.mp4> [--every 0.5] [--at 3.3 5.0] [--timeline build/timeline_v2.json] [--spec spec.v2.json]
 
 Prints duration / frames / resolution / size, audio peak and mean, black-frame
 runs, and writes a labelled contact sheet (one frame every --every seconds, plus
 one frame 0.1 s into every segment when a timeline is given) next to the video
 as build/check_<name>.png. Look at that PNG with the Read tool and confirm the
 subject is in frame at each cut and every caption is legible before you say the
-edit is done. Needs ffmpeg + Pillow.
+edit is done. With --spec (and --timeline) it also scores retention: hook text on the
+first frame, the first segment moving (not a still or card), the longest stretch with
+no cut, caption change or hit, and whether any sound exists besides silence.
+Needs ffmpeg + Pillow.
 """
 import argparse, json, os, re, subprocess, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sheets import probe, frames_at, tile, label
 
+def retention(spec, tl, dur, mean):
+    """The things that decide whether a Short is swiped away, checked from the spec rather than guessed."""
+    ov = spec.get("overlays", []); hits = spec.get("audio", {}).get("hits", []); segs = tl["segments"]
+    rows = []
+    first = min([o["from"] for o in ov] or [99])
+    rows.append(("hook text by 0.1 s", first <= 0.1, "first caption at %.2f s" % first if first < 99 else "no captions"))
+    rows.append(("opens on motion", segs[0]["type"] not in ("still", "card"), "first segment: %s %s" % (segs[0]["type"], segs[0]["label"])))
+    ev = sorted({0.0, dur} | {r["start"] for r in segs} | {o["from"] for o in ov} | {h["at"] for h in hits})
+    gaps = [(b - a, a) for a, b in zip(ev, ev[1:])]; g, at = max(gaps)
+    rows.append(("something changes every <= 3 s", g <= 3.0, "longest still stretch %.2f s from %.2f s" % (g, at)))
+    rows.append(("length 13-30 s", 13 <= dur <= 30, "%.2f s" % dur))
+    heard = bool(spec.get("audio", {}).get("bed")) or bool(hits) or (mean is not None and float(mean.group(1)) > -60)
+    rows.append(("has sound", heard, "bed/hits in spec" if heard else "silent: add a bed, hits, or a sound at upload"))
+    print("  retention:")
+    for name, ok, why in rows: print("    %-4s %-32s %s" % ("ok" if ok else "FAIL", name, why))
+    print("    loop: compare the last frame with the first on the sheet; the end should cut back into the opening")
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("video"); ap.add_argument("--every", type=float, default=0.5); ap.add_argument("--at", type=float, nargs="*", default=[])
     ap.add_argument("--timeline", help="build/timeline_vN.json from render.py"); ap.add_argument("--cols", type=int, default=8)
+    ap.add_argument("--spec", help="spec.vN.json: adds the retention checks (needs --timeline)")
     a = ap.parse_args()
     W, H, fps, dur = probe(a.video); size = os.path.getsize(a.video) / 1e6
     nb = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-count_frames", "-show_entries", "stream=nb_read_frames", "-of", "csv=p=0", a.video],
@@ -38,6 +59,7 @@ def main():
     tl = json.load(open(a.timeline)) if a.timeline else None
     if tl and abs(tl["total"] - dur) > 0.2: warn.append("duration %.2f differs from planned %.2f" % (dur, tl["total"]))
     print("  " + ("WARN: " + "; ".join(warn) if warn else "no warnings"))
+    if a.spec and tl: retention(json.load(open(a.spec)), tl, dur, mean)
     times = a.at or [round(k * a.every, 3) for k in range(int(dur / a.every) + 1) if k * a.every < dur]
     frames = frames_at(a.video, times, 240)
     if tl:

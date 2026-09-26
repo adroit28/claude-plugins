@@ -1,12 +1,13 @@
 # football-shorts
 
-Three skills that take a football YouTube Short from "what is trending right now"
-to a finished, revised `.mp4`, all scripted and reproducible.
+Four skills that take a football YouTube Short from "what is trending right now"
+(or from a video you already have) to a finished, revised `.mp4`, all scripted and reproducible.
 
 | Skill | What it does |
 |---|---|
 | `/football-shorts:research` | Searches the web, YouTube (view velocity via yt-dlp, no API key), Reddit and the browser for moments from the last 24–72 h; writes a brief with the 5 strongest ideas: sources, second-by-second edit plan, hook text, caption, music, rights risk. |
 | `/football-shorts:build` | Fetches one or many sources (only with your explicit OK), finds moments with labelled contact sheets, writes a JSON edit spec, renders 1080×1920 with ffmpeg + Pillow (cuts, pans, freezes, slow-mo, reverse, split-screen, boomerang, captions, emoji, audio bed, bass hits), verifies, hands over. |
+| `/football-shorts:enhance` | Takes a video you already have (clip, compilation, re-upload; letterboxed or vertical; with or without sound), maps its shots, bars and dead air, offers three hooks, and re-edits it without changing its story: cold open, counters, slow-mo on each chance, punch-ins, freeze + shake, synthesised whoosh/riser/bass/ding, blurred-fill 9:16 layout, loop ending, retention score. |
 | `/football-shorts:revise` | Applies numbered feedback to the spec, bumps the version, re-renders only what changed, shows before/after frames. |
 | `football-shorts:scout` (agent) | The cheap worker behind `research`: runs the searches, yt-dlp view-velocity runs, browser scrapes and URL verification on `sonnet`, writes `shorts/briefs/sweep-<date>.md`. The session model only ranks, designs and writes the brief. |
 
@@ -29,6 +30,8 @@ is optional (Reddit, Shorts shelves, X posts).
 /football-shorts:research focus: ronaldo, window: 24h
 /football-shorts:build shorts/briefs/2026-09-25-ronaldo-wales.md idea 1 — yes, download the sources
 /football-shorts:build slug: tunnel-cam length: 18 sources: ~/Downloads/fancam.mp4 https://youtu.be/...
+/football-shorts:enhance ~/Downloads/ronaldo-misses.mp4
+/football-shorts:enhance ~/Downloads/clip.mp4 hook: counter length: 18
 /football-shorts:revise 1. drop the opening still 2. at 7 s his face is cut off 3. make it ~20 s
 ```
 
@@ -49,7 +52,7 @@ subagent (`agents/scout.md`, `model: sonnet`). Options:
   and the spot-check step still guard against invented sources.
 - Call the scout alone for a raw candidate table: `@agent-football-shorts:scout
   focus haaland, window 24h` and read `shorts/briefs/sweep-<date>.md`.
-- `build` and `revise` are mostly script time; a cheaper session model is fine for
+- `build`, `enhance` and `revise` are mostly script time; a cheaper session model is fine for
   `revise` when the feedback is mechanical (timing, text, volume).
 
 ## Scripts by hand
@@ -63,7 +66,9 @@ $PY skills/build/scripts/sheets.py coarse shorts/my-edit/src/por.mp4
 $PY skills/build/scripts/sheets.py frames shorts/my-edit/src/por.mp4 --at 263.4 297.8
 $PY skills/build/scripts/render.py shorts/my-edit/spec.v1.json --dry-run
 $PY skills/build/scripts/render.py shorts/my-edit/spec.v1.json
-$PY skills/build/scripts/check.py shorts/my-edit/my-edit_v1.mp4 --timeline shorts/my-edit/build/timeline_v1.json
+$PY skills/build/scripts/check.py shorts/my-edit/my-edit_v1.mp4 --timeline shorts/my-edit/build/timeline_v1.json --spec shorts/my-edit/spec.v1.json
+$PY skills/enhance/scripts/analyse.py ~/Downloads/clip.mp4 --out shorts/my-edit/build     # shots, letterbox box, dead air, loudness
+$PY skills/build/scripts/sheets.py fine ~/Downloads/clip.mp4 --from 0 --to 4 --fps 4 --crop 478:302:0:274
 ```
 
 ## Rights
@@ -85,5 +90,8 @@ skills/research/scripts/ytsearch.py
 skills/build/SKILL.md
 skills/build/references/{spec-format,ffmpeg-recipes,channel-style}.md
 skills/build/scripts/{setup.sh,fetch.py,sheets.py,render.py,check.py}
+skills/enhance/SKILL.md
+skills/enhance/references/hook-playbook.md
+skills/enhance/scripts/analyse.py
 skills/revise/SKILL.md
 ```

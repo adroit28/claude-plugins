@@ -5,6 +5,7 @@
   sheets.py fine   <video> --from 262 --to 272 [--fps 2]          dense sheet of a window
   sheets.py frames <video> --at 263.0 263.5 264.0 [--grid 100]    labelled frames with a pixel grid
   sheets.py compare <out.mp4> --at 3.3 5.0 6.6 ...                same as frames, for a rendered Short
+  add --crop w:h:x:y to any mode to look only inside a letterboxed clip's picture box
 
 Every frame is stamped with its time in seconds. `frames` also draws a grid every
 --grid source pixels with x labels, so a crop can be read straight off the image
@@ -25,9 +26,11 @@ def probe(v):
     j = json.loads(p.stdout); s = j["streams"][0]; n, d = s["r_frame_rate"].split("/")
     return s["width"], s["height"], float(n) / float(d), float(j["format"]["duration"])
 
+CROP = None  # "w:h:x:y" from --crop: look only inside the picture box of a letterboxed clip
+
 def grab(v, t, w, out):
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", str(t), "-i", v, "-frames:v", "1",
-                    "-vf", "scale=%d:-2" % w, out], check=True)
+                    "-vf", ("crop=%s," % CROP if CROP else "") + "scale=%d:-2" % w, out], check=True)
 
 def label(im, text, size=28):
     d = ImageDraw.Draw(im); f = ImageFont.truetype(FONT, size)
@@ -45,12 +48,14 @@ def frames_at(v, times, width, grid=None, src_w=None):
     for t in times:
         p = os.path.join(tmp, "%08.2f.png" % t); grab(v, t, width, p); im = Image.open(p).convert("RGB")
         if grid:
-            d = ImageDraw.Draw(im); f = ImageFont.truetype(FONT, 14); sc = im.width / src_w
-            for gx in range(0, src_w + 1, grid):
+            ox, oy, cw = 0, 0, src_w
+            if CROP: cw, _, ox, oy = [int(n) for n in CROP.split(":")]
+            d = ImageDraw.Draw(im); f = ImageFont.truetype(FONT, 14); sc = im.width / cw
+            for gx in range(0, cw + 1, grid):
                 x = gx * sc; d.line([(x, 0), (x, im.height)], fill=(255, 255, 0, 120), width=1)
-                d.text((x + 2, im.height - 18), str(gx), font=f, fill="yellow")
+                d.text((x + 2, im.height - 18), str(gx + ox), font=f, fill="yellow")
             for gy in range(0, int(im.height / sc) + 1, grid):
-                y = gy * sc; d.line([(0, y), (im.width, y)], fill=(255, 255, 0, 90), width=1); d.text((2, y + 1), str(gy), font=f, fill="yellow")
+                y = gy * sc; d.line([(0, y), (im.width, y)], fill=(255, 255, 0, 90), width=1); d.text((2, y + 1), str(gy + oy), font=f, fill="yellow")
         out.append(label(im, "%.2fs" % t))
     return out
 
@@ -62,7 +67,9 @@ def main():
     ap.add_argument("--at", type=float, nargs="*", default=[]); ap.add_argument("--grid", type=int, default=100)
     ap.add_argument("--out", default=None, help="output dir (default: <video dir>/../build/sheets)")
     ap.add_argument("--width", type=int, default=None, help="thumbnail width px")
+    ap.add_argument("--crop", help="w:h:x:y picture box to look inside (analyse.py prints it for letterboxed clips); grid x/y stay in source pixels")
     a = ap.parse_args()
+    global CROP; CROP = a.crop
     W, H, fps, dur = probe(a.video)
     base = os.path.splitext(os.path.basename(a.video))[0]
     outdir = a.out or os.path.join(os.path.dirname(os.path.abspath(a.video)), "..", "build", "sheets")
