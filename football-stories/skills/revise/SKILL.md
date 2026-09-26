@@ -41,7 +41,7 @@ revision is `story.v<N+1>.json` and `<slug>_v<N+1>.mp4`.
    | Hits, whooshes, loudness, bed | `audio` | compose (whoosh) / finish | free |
    | Hold at the end, lead, motion | `motion` | compose → finish | free |
 
-3. **New version.** Copy `story.v<N>.json` to `story.v<N+1>.json`, set `"version": N+1`, apply the edits, then run only the steps the table lists. For new content, verify the new facts first (research rules), and run `validate.py --stage build`. If a new take is needed, confirm with the user when it's on the paid key.
+3. **New version.** Copy `story.v<N>.json` to `story.v<N+1>.json`, set `"version": N+1`, apply the edits, then run only the steps the table lists. For new content, verify the new facts first: call `football-stories:fact-finder` with `mode: verify` and the numbered claims, spot-check what it returns (research skill rules), add the facts to the story, then run `validate.py --stage build`. If a new take is needed, confirm with the user when it's on the paid key.
 4. **Prove it.** `check.py <slug>_v<N+1>.mp4 --timeline build/timeline_v<N+1>.json` (Read the sheet), then `check.py <new.mp4> --ref <old.mp4> --at <seconds of each item>` and Read the compare sheet (ref left, new right). Timing moves when pace or words change, so pick times inside the same scene in both. If an item is not visibly fixed, adjust once more before handing over.
 5. **Hand over.** `open` the new mp4. Per item: done / done differently (why) / not done (why), with the scene and seconds; new duration and any rule it now breaks (over 30 s etc.); new path; the previous version kept. Invite the next numbered list.
 6. **Record.** Append to `notes.md`: version, date, feedback verbatim, changes, cost, checks.

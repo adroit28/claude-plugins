@@ -11,6 +11,7 @@ Narrated football story Shorts with no footage: a verified story, a fact-cited s
 | `/football-stories:build` | Template cards (HTML → headless Chrome), a Pillow frame loop with zooms, crossfades, whips and 3-word captions, whooshes and bass hits, loudnorm −14 LUFS, a check sheet, and a hand-over with title, description, hashtags and the AI-voice note. |
 | `/football-stories:revise` | Numbered feedback → the next story version, re-rendering only what changed, with before/after frames. |
 | `/football-stories:make` | All of the above in order, stopping for you to pick the story, approve facts and script, and approve the voice. |
+| `football-stories:fact-finder` (agent) | The cheap worker behind `research` (and new facts in `revise`): runs discover.py and the searches, opens the sources and returns every fact with URL, publisher, date and the verbatim supporting sentence, on `sonnet`. The session model spot-checks, judges and writes. |
 
 ## Install
 
@@ -60,6 +61,15 @@ Output lives in your project: `shorts/briefs/` (leads and story cards), `shorts/
 per Short (`story.vN.json`, `build/`, `graphics/vN/`, `<slug>_vN.mp4`, `notes.md`),
 `shorts/lexicon.json` (name respellings). Set `FOOTBALL_SHORTS_DIR` to move `shorts/`.
 
+## Cost and models
+
+- **Voice:** `free` costs nothing (Gemini free tier, or Kokoro offline); the paid key is ≈₹0.65 per Short. Rendering is all local.
+- **Claude usage** is the main cost, and most of it is research. The legwork runs in `agents/fact-finder.md` on `model: sonnet`; the session model only spot-checks the evidence (re-reading one quoted sentence per core claim), ranks, and writes cards and the script.
+- Change the agent's model: edit `model:` in `agents/fact-finder.md` (`haiku` is cheapest but weaker at judging independence; `opus` for hard historical stories).
+- Run the whole research skill cheaper: `/model sonnet` before `/football-stories:research`, or add `model: sonnet` to `skills/research/SKILL.md`'s frontmatter. Story choice and fact judgement get weaker; the verbatim-quote rule and `validate.py` still block unsourced lines.
+- Check claims directly: `@agent-football-stories:fact-finder mode: verify 1. <claim> 2. <claim>` and read `shorts/briefs/verify-*.json`.
+- `build` and `revise` are mostly script time; a cheaper session model is fine for mechanical revisions (pace, card text, hits).
+
 ## Scripts by hand
 
 ```
@@ -93,6 +103,7 @@ pixel for pixel, identical picture track, same length and loudness).
 
 ```
 .claude-plugin/plugin.json
+agents/fact-finder.md
 scripts/{setup.sh,common.py,discover.py,validate.py,tts.py,align.py,cards.py,compose.py,finish.py,check.py}
 skills/research/SKILL.md + references/{formats,story-card,sources}.md
 skills/narrate/SKILL.md  + references/voices.md
