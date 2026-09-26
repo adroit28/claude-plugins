@@ -1,6 +1,6 @@
 ---
 name: research
-description: Find and verify story ideas for narrated football Shorts (no footage), write ranked story cards with two sources per fact, and once the user picks one, draft the fact-cited script as story.v1.json. Uses news RSS, Reddit RSS, Wikipedia on-this-day, dated web searches and Commons photo licences. Use when the user says "find a football story", "story ideas", "what story should we narrate", "on this day football", "write the script for", or invokes /football-stories:research.
+description: Find and verify story ideas for narrated football Shorts, write ranked story cards with two sources per fact, and once the user picks one, draft the fact-cited script as story.v1.json; after approval, write a handoff prompt so narrate and build can run in a fresh, cheaper session. Uses news RSS, Reddit RSS, Wikipedia on-this-day, dated web searches and Commons photo licences. Use when the user says "find a football story", "story ideas", "what story should we narrate", "on this day football", "write the script for", or invokes /football-stories:research.
 ---
 
 # Story research
@@ -17,7 +17,8 @@ memory.
 | Evidence (from fact-finder) | `shorts/briefs/evidence-YYYY-MM-DD.{json,md}` (sweep), `shorts/briefs/verify-YYYY-MM-DD-<story>.json` (verify) |
 | Story cards | `shorts/briefs/stories-YYYY-MM-DD.md` |
 | Script | `shorts/<slug>/story.v1.json` |
-| Scripts | `${CLAUDE_PLUGIN_ROOT}/scripts/{discover.py,validate.py}` (stdlib, `python3` is fine) |
+| Scripts | `${CLAUDE_PLUGIN_ROOT}/scripts/{discover.py,validate.py,cost.py}` (stdlib, `python3` is fine) |
+| Handoff | `shorts/<slug>/handoff.md` (the prompt for a fresh session once the script is approved) |
 | References | `references/formats.md` (F1–F13) · `references/story-card.md` (gates, score, card format) · `references/sources.md` (sources, verification, photos) · `../build/references/story-format.md` · `../build/references/channel-style.md` |
 | Channel rules | `${CLAUDE_PROJECT_DIR}/yt-insights/style.md` if present (wins), else `channel-style.md` |
 | Agent | `football-stories:fact-finder` (`${CLAUDE_PLUGIN_ROOT}/agents/fact-finder.md`, `model: sonnet`) |
@@ -62,7 +63,8 @@ in `agents/fact-finder.md` (`haiku`, `sonnet`, `opus`, or a full model ID).
 5. **Gate.** Apply both gates (story-card.md) to each candidate, judging independence yourself (two outlets quoting one wire = one source). Drop what fails into Rejected. Do not plan a `doubtful` photo.
 6. **Score and match a format** (story-card.md, formats.md). Draft the hook line and a title per card.
 7. **Write** `shorts/briefs/stories-YYYY-MM-DD.md` in the card format, best first, then Rejected and Method/caveats. Cut weak cards rather than pad.
-8. **Report in chat:** one line per card (name · format · score · confidence · why now), the file path, and "pick a card number to get the script". Stop.
+8. **Cost.** From the project root: `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/cost.py --step "research: cards"`.
+9. **Report in chat:** one line per card (name · format · score · confidence · why now), the file path, the cost lines from step 8, and "pick a card number to get the script". Stop.
 
 ## Procedure: script (after the user picks)
 
@@ -70,13 +72,29 @@ in `agents/fact-finder.md` (`haiku`, `sonnet`, `opus`, or a full model ID).
 1. **Slug** from the story, kebab-case. Refuse to write into an existing `shorts/<slug>/` from another session: pick a new slug.
 2. **Write `story.v1.json`** per `../build/references/story-format.md`: `facts` (from the card, `signed_off` empty), `narration.style` (delivery prompt), and `narration.lines`:
    - Follow the format's beats. First line = the hook, said in ~1.5 s. Last line = short payoff, `"no_claim": true`.
-   - 65–75 words total (20–30 s at pace 0.93). One idea per line, 3–14 words per line.
+   - 65–75 words total (20–30 s at pace 0.93). If the user asked for a longer cut, up to about 90 words with `"length": {"max": 40}`; never over 40 s. One idea per line, 3–14 words per line.
+   - Day names ("on Thursday") are computed from the fact's date (`date -j -f %Y-%m-%d <date> +%A`), never copied from an article: outlets write "on Wednesday" relative to their own publish date.
    - Every other line cites its fact ids. Nothing in a line that its facts don't support.
    - Write for the ear: numbers as spoken ("eighteen"), no brackets, no abbreviations. `tts` only where emphasis (CAPS) or a pause (`...`, `<short pause>`) helps.
    - Names the voice may get wrong: add to `shorts/lexicon.json` if not there (respelling, `verified_by_ear: false`).
    - Also fill `publish` (title per channel rules, 1–2 sentence description with sources in short form) and `disclosure` (`"description_note": "Narration voice is AI-generated."`).
+   - If the user wants real footage, note the moments each line could show; searching and downloading happen in `build` (after an explicit yes).
 3. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/validate.py shorts/<slug>/story.v1.json` and fix every ERROR.
-4. **Show the user** the script as a table (line · text · facts) and the fact table with sources, the estimated length, and anything unverified. Ask them to approve or edit. When they approve, set `signed_off` to today's date on each fact. Next step: `/football-stories:narrate shorts/<slug>/story.v1.json`.
+4. **Show the user** the script as a table (line · text · facts) and the fact table with sources, the estimated length, and anything unverified. Ask them to approve or edit. When they approve, set `signed_off` to today's date on each fact and run `validate.py` again.
+5. **Script complete: cost and handoff.** Research leaves a large context (evidence, source pages, cards), and every later turn in this session re-reads it. Narrate and build don't need it: the story file holds everything.
+   - `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/cost.py --step "research: script" --slug <slug>`.
+   - Write `shorts/<slug>/handoff.md` with the prompt below, filled in.
+   - In chat: the cost lines, then "The script is complete. For a cheaper build, open a new Claude Code session in `<project root>` and paste this prompt", then the prompt in a code block. If the user says to continue here instead, go on with `/football-stories:narrate`.
+
+   ```
+   /football-stories:make shorts/<slug>/story.v1.json
+   The script is approved and every fact was signed off on <date>: start at narrate (step 3), don't redo research.
+   Voice: <free | voice name> at pace <0.93 | p>. Length limit: <30 | 40> s.
+   Footage: <none | the user said yes to downloads for this video on <date>; moments per line: L1 <...>, L6 <...>>.
+   Deadline: <post before <time> IST | none>.
+   Notes: <1–3 lines the next session needs: the angle, what the user liked, what to avoid>.
+   New facts only through football-stories:fact-finder in verify mode. Report the cost after each step.
+   ```
 
 ## Inline fallback (only when fact-finder cannot run)
 
@@ -89,4 +107,5 @@ Run `discover.py --out shorts/briefs`, then 8–12 dated WebSearch queries (`ref
 - Stats in your own words; quotes verbatim with source and date. No allegation about a real person beyond what the sources say.
 - This skill downloads no video and uploads nothing.
 - Every number in the cards says where it was read.
+- Day names and relative dates are computed from the fact's date, never copied.
 - The agent collects; you judge. Never put a fact on a card or in a script that you or the agent did not read on a page, and always re-check the core claim of every card and every fact of the picked story yourself.

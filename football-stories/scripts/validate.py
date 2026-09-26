@@ -5,16 +5,18 @@
 
 script stage (after research): schema tag, facts have sources, every line cites existing facts
 (or is marked "no_claim": true, e.g. "Remember the name."), no duplicate ids, word-count estimate
-for 20-30 s at the story's pace, disclosure note present.
+for 20-30 s at the story's pace (up to "length": {"max": 40} when the user asked for a longer cut),
+disclosure note present.
 build stage adds: scene templates exist, step anchors resolve and run in word order, hits anchor
 to real words, every asset has a known rights class (doubtful/unknown are errors unless the
-scene does not use them), and a music bed is licensed or CC.
+scene does not use them), a music bed is licensed or CC, and every clip has a video source with
+the user's rights.accepted date (when doubtful/unknown), a w:h:x:y crop and anchors that exist.
 """
-import argparse, json, pathlib, sys
+import argparse, json, pathlib, re, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from common import Story
 
-WPS = 2.9          # Gemini en-in-tutor-1 read the 78-word Satpayev script in 27 s before pacing
+WPS = 2.7          # Gemini en-in-tutor-1: 78 words in 27 s (Satpayev), 97 words with pauses in 37.8 s (Ronaldo v Haaland)
 
 
 def main():
@@ -39,8 +41,10 @@ def main():
             if fid not in facts: err.append("line %s cites unknown fact %s" % (l["id"], fid))
     n = len(st.script_words()); pace = d["narration"].get("pace", 0.93)
     est = n / WPS / pace + 0.75
-    print("%d words, estimated %.1f s at pace %g" % (n, est, pace))
-    if est > 30: warn.append("estimated %.1f s: over 30 s, cut about %d words" % (est, int((est - 30) * WPS * pace) + 1))
+    cap = d.get("length", {}).get("max", 30)
+    print("%d words, estimated %.1f s at pace %g (limit %g s)" % (n, est, pace, cap))
+    if est > cap: warn.append("estimated %.1f s: over %g s, cut about %d words" % (est, cap, int((est - cap) * WPS * pace) + 1))
+    if cap > 40: warn.append("length.max %g: the channel's Shorts over 40 s never cleared 100 views" % cap)
     if est < 18: warn.append("estimated %.1f s: short for a story (target 20-30 s)" % est)
     if "AI-generated" not in json.dumps(d.get("disclosure", {})): warn.append('disclosure.description_note should say "Narration voice is AI-generated."')
 
@@ -66,6 +70,19 @@ def main():
                 else: prev = (ids.index(line), i)
         for h in d.get("audio", {}).get("hits", []):
             if (h["at"]["line"], h["at"].get("word", 0)) not in words: err.append("hit anchor %s does not exist" % h["at"])
+        for c in d.get("clips", []):
+            src = assets.get(c.get("asset"), {}); r = src.get("rights", {})
+            if src.get("kind") != "video": err.append("clip %s: asset %r is not a video asset" % (c.get("id"), c.get("asset")))
+            if r.get("class") in (None, "unknown", "doubtful") and not r.get("accepted"):
+                err.append("clip %s: %s needs rights.accepted (date of the user's yes for this video)" % (c.get("id"), c.get("asset")))
+            if not re.fullmatch(r"\d+:\d+:\d+:\d+", str(c.get("crop", ""))): err.append("clip %s: crop must be w:h:x:y" % c.get("id"))
+            for k in ("from", "to"):
+                an = c.get(k)
+                if isinstance(an, dict):
+                    i = an.get("word", 0)
+                    if i < 0: i += len(next((l["text"] for l in st.lines if l["id"] == an["line"]), "").split())
+                    if (an["line"], i) not in words: err.append("clip %s: %s anchor %s does not exist" % (c.get("id"), k, an))
+                elif not (isinstance(an, (int, float)) or an == "end"): err.append("clip %s: %s must be an anchor, seconds or \"end\"" % (c.get("id"), k))
         bed = d.get("audio", {}).get("bed")
         if bed and assets.get(bed["asset"], {}).get("rights", {}).get("class") not in ("licensed", "cc", "own"):
             err.append("music bed %s is not licensed/CC/own" % bed["asset"])

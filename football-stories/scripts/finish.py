@@ -3,7 +3,7 @@
 
   finish.py <story.vN.json>
 
-Reads build/timeline_v<N>.json from compose.py. The video stream is copied (it was encoded once by
+Reads build/timeline_v<N>.json from compose.py (and clips.py, which points it at the footage track). The video stream is copied (it was encoded once by
 compose.py). Audio: the voice mix, 48 Hz sine hits at the anchored words, an optional music bed
 from the story's assets, then loudnorm to -14 LUFS / -1.5 dBTP. AAC 160k 48 kHz stereo, +faststart.
 """
@@ -15,6 +15,8 @@ from common import Story
 def main():
     st = Story(sys.argv[1] if len(sys.argv) > 1 else sys.exit(__doc__))
     tl = json.loads(st.p("build/timeline_v%d.json" % st.version).read_text())
+    if st.data.get("clips") and not tl.get("clips"):
+        sys.exit("the story has clips but timeline_v%d.json points at the card-only track: run clips.py after compose.py" % st.version)
     total = tl["total"]; au = st.data.get("audio", {})
     # A silent stereo track goes first so amix (duration=first) runs the exact length and mixes in stereo.
     inputs = ["-i", str(st.p(tl["video"])), "-f", "lavfi", "-t", "%.3f" % total, "-i", "anullsrc=r=48000:cl=stereo",

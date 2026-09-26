@@ -40,6 +40,8 @@ Missing items: use the defaults and say so in your report.
   governing-body page is primary: note `primary: true`.
 - Numbers, dates and ages exactly as the page gives them. If you compute something (an age, a gap
   in months), write `computed: "<how>"` and keep the inputs as separate facts.
+- Record match days as calendar dates ("24 Sep 2026"). A day name in an article ("on Wednesday") is
+  relative to its publish date: record the date and leave the weekday to be computed.
 - If a page contradicts another, record both and set `conflict: true`. Do not pick a winner.
 - Current state (who manages a club, where a player is on loan) must come from a page dated in the
   last few weeks, not from background knowledge.

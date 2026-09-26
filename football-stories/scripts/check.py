@@ -5,7 +5,8 @@
   check.py <new.mp4> --ref <old.mp4> [--at 3.3 7.0] [--every 1.0]
 
 Prints resolution, fps, duration, frame count, size, audio peak / mean / integrated loudness and
-black-frame runs, with warnings against the channel rules (20-30 s, peak <= -1 dB). Writes a
+black-frame runs, with warnings against the channel rules (20-30 s, or the story's length.max from
+the timeline; peak <= -1 dB). Writes a
 labelled contact sheet to build/check_<name>.png (one frame every --every seconds, plus one frame
 per scene when a timeline is given).
 
@@ -78,12 +79,13 @@ def main():
     print("  audio peak %s dB, mean %s dB, integrated %s LUFS" % (au["peak"], au["mean"], au["lufs"]))
     warn = []
     if abs(W / H - 9 / 16) > 0.01: warn.append("not 9:16")
-    if dur > 30.05: warn.append("over 30 s (channel rule 20-30 s; Shorts over 40 s never cleared 100 views)")
+    tl = json.load(open(a.timeline)) if a.timeline else None
+    cap = (tl or {}).get("max_seconds", 30)
+    if dur > cap + 0.05: warn.append("over %g s (channel rule 20-30 s, up to 40 s when the user asked for longer; Shorts over 40 s never cleared 100 views)" % cap)
     if dur < 13: warn.append("under 13 s")
     if au["peak"] is not None and au["peak"] > -1.0: warn.append("peak above -1 dBFS")
     if au["mean"] is not None and au["mean"] < -24: warn.append("quiet: mean below -24 dB")
     if au["blacks"]: warn.append("black frames at " + ", ".join("%s-%s" % b for b in au["blacks"]))
-    tl = json.load(open(a.timeline)) if a.timeline else None
     if tl and abs(tl["total"] - dur) > 0.1: warn.append("duration %.2f differs from planned %.2f" % (dur, tl["total"]))
     print("  " + ("WARN: " + "; ".join(warn) if warn else "no warnings"))
     build = os.path.join(os.path.dirname(os.path.abspath(a.video)), "build"); os.makedirs(build, exist_ok=True)

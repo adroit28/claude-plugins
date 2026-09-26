@@ -213,7 +213,11 @@ def main():
         return
 
     if a.from_take:
-        take = st.p(a.from_take) if not pathlib.Path(a.from_take).is_absolute() else pathlib.Path(a.from_take)
+        take = pathlib.Path(a.from_take)
+        if not take.is_absolute():
+            take = st.dir / take if (st.dir / take).exists() else take.resolve()
+        if not take.exists():
+            sys.exit("take not found: %s (give it relative to the story folder, e.g. build/take_<voice>.wav)" % a.from_take)
         m = re.match(r"take_(.+)\.wav$", take.name)
         tag = m.group(1) if m else take.stem
         engine, voice = st.data["narration"].get("voice", {}).get("engine", "unknown"), st.data["narration"].get("voice", {}).get("voice", tag)

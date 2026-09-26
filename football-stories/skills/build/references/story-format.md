@@ -16,6 +16,7 @@ Working example: `shorts/satpayev-rebuild/story.v1.json` (rebuilds `satpayev-fif
  "version": 1,
  "format": "F10-it-happened-before",         // F1–F13, see research/references/formats.md
  "canvas": {"width": 1080, "height": 1920, "fps": 30},
+ "length": {"max": 30},                      // optional; 40 only when the user asked for a longer cut (validate.py, check.py)
 
  "facts": [                                  // research writes these; the user signs them off
   {"id": "f1", "claim": "...", "sources": ["https://...", "https://..."], "confidence": "high", "signed_off": "2026-09-27"}
@@ -37,7 +38,10 @@ Working example: `shorts/satpayev-rebuild/story.v1.json` (rebuilds `satpayev-fif
 
  "assets": {                                 // every image / music file with its rights
   "photo_key": {"kind": "image", "path": "assets/x.jpg",
-   "rights": {"class": "cc", "license": "CC BY 2.0", "author": "...", "source_url": "https://commons...", "check": "..."}}
+   "rights": {"class": "cc", "license": "CC BY 2.0", "author": "...", "source_url": "https://commons...", "check": "..."}},
+  "por_wal": {"kind": "video", "path": "src/porwal.mp4",           // downloaded by fetch.py (logged in src/sources.json)
+   "rights": {"class": "doubtful", "origin": "broadcaster", "channel": "...", "source_url": "https://www.youtube.com/watch?v=...",
+              "accepted": "2026-09-26"}}                              // date of the user's yes for THIS video
  },
  // rights.class: own | cc | licensed | doubtful | unknown. doubtful/unknown are refused by
  // cards.py and validate.py unless the user explicitly accepts (--allow-doubtful) and the
@@ -48,6 +52,17 @@ Working example: `shorts/satpayev-rebuild/story.v1.json` (rebuilds `satpayev-fif
    "steps": [{"at": {"line": "L1", "word": 0}}, {"at": {"line": "L1", "word": 9}}],   // step k reveals element k
    "photo": "photo_key"}                     // optional background photo
  ],
+ "clips": [                                  // optional real footage, rendered by clips.py after compose.py
+  {"id": "c1", "asset": "por_wal", "ss": 298.0,                       // source time the window starts at
+   "from": {"line": "L1", "word": 0}, "to": {"line": "L2", "word": 0}, // word anchors (or seconds, or "to": "end")
+   "crop": "1130:509:450:150", "box": "top",                          // full 1000x900 at y 250 | top | bottom (1000x450) | [x,y,w,h]
+   "slow": 2.0, "pre": "delogo=x=2:y=2:w=560:h=118",                 // optional: half speed; filter before the crop
+   "note": "Ronaldo celebrating, crop clear of the score bug"}
+ ],
+ // Clips are muted and sit inside the graphics zone, above the caption band. Crop clear of
+ // broadcaster logos, score bugs and watermarks; use "pre" delogo where a crop would cut the subject.
+ // Scenes under footage: one scene across back-to-back clips (a whip between two covered
+ // scenes flashes card text around the box; clips.py warns).
  // "word" is the 0-based index into the line's text.split(); negative counts from the end.
  // The first step of the first scene is shown from 0 s. Each step appears `motion.lead` s
  // before its word starts. A new scene = whip + whoosh; a new step = crossfade + punch.
@@ -73,5 +88,8 @@ Working example: `shorts/satpayev-rebuild/story.v1.json` (rebuilds `satpayev-fif
 | `build/words_<audio>.json`, `build/align_<audio>.json` (flags) | align.py |
 | `graphics/v<N>/<scene>_<step>.png` + `.html`, `graphics/v<N>/sheet.png` | cards.py |
 | `build/graphics_v<N>.mp4`, `build/voice_fx_v<N>.wav`, `build/timeline_v<N>.json` | compose.py |
+| `build/graphics_v<N>_clips.mp4` (timeline `video` repointed, `clips` added) | clips.py |
+| `src/*.mp4`, `src/sources.json` | football-shorts fetch.py (footage, after the user's yes) |
+| `handoff.md` (prompt for a fresh session once the script is approved) | research skill |
 | `<slug>_v<N>.mp4` | finish.py |
 | `build/check_<name>.png`, `build/compare_<new>_vs_<ref>.png` | check.py |

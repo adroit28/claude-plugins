@@ -29,6 +29,17 @@ Any template accepts `"photo": "<asset key>"` on the scene: a dimmed background 
 the top two thirds (name_plate uses its own photo layout). Photos need a rights class of
 own, cc or licensed.
 
+## Fitting text
+
+Overflow is the most common card fix. Start short: long surnames on `name_plate`, a date
+with a weekday in `calendar_gap` or a `rule_card` footer, quotes over about 12 words, and
+verdicts over about 3 words overflow most often. Prefer "12:15 AM Mon" to "Monday 12:15 AM IST",
+"Comment ⬇" to a sentence. Break lines with `\n` before shrinking anything.
+
+Under footage (`clips`), the box covers y 250–1150, so a card under a full-box clip shows only
+its edges and the caption band. Give those stretches one quiet scene (a `headline_card`),
+not a sequence of reveals nobody can see.
+
 ## Adding a template
 
 A function `name(x, p, step)` in cards.py returning `x.page(inner_html, extra_css, bg=x.photo_bg())`,

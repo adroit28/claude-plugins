@@ -75,7 +75,7 @@
     {
       "name": "football-stories",
       "source": "./football-stories",
-      "description": "Narrated football story Shorts with no footage: verified story cards with two sources per fact (legwork on a Sonnet subagent), a fact-cited script, free or paid narration (Gemini TTS en-IN voices, Kokoro, your own recording) at a slightly slower pace, Whisper word alignment, animated template cards with word-timed captions, and revision from numbered feedback.",
+      "description": "Narrated football story Shorts: verified story cards with two sources per fact (legwork on a Sonnet subagent), a fact-cited script with a handoff prompt for a fresh session, free or paid narration (Gemini TTS en-IN voices, Kokoro, your own recording), Whisper word alignment, animated template cards with word-timed captions and optional muted footage clips, revision from numbered feedback, and the Claude cost after each step.",
       "keywords": [
         "youtube",
         "shorts",

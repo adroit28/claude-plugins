@@ -1,7 +1,7 @@
 {
   "name": "football-stories",
-  "version": "0.2.0",
-  "description": "Narrated football story Shorts with no footage: find and verify story ideas with two sources per fact (evidence legwork on a cheaper Sonnet subagent, judgement on the session model), draft a fact-cited script, narrate it with a free or paid voice (Gemini TTS free tier, local Kokoro, your own recording) at a slightly slower pace, align the words with Whisper, build animated cards from a template library with word-timed captions, and revise from numbered feedback.",
+  "version": "0.3.0",
+  "description": "Narrated football story Shorts: find and verify story ideas with two sources per fact (evidence legwork on a cheaper Sonnet subagent, judgement on the session model), draft a fact-cited script, then hand off to a fresh session; narrate it with a free or paid voice (Gemini TTS free tier, local Kokoro, your own recording), align the words with Whisper, build animated cards from a template library with word-timed captions and optional muted footage clips, revise from numbered feedback, and report the Claude cost after each step.",
   "author": {
     "name": "adroit28"
   },

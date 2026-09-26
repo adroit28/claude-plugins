@@ -144,7 +144,7 @@ def main():
     fx = st.out("build/voice_fx_v%d.wav" % v)
     subprocess.run(["ffmpeg", "-v", "error", "-y", *inputs, "-filter_complex", fc, "-map", "[a]", "-ar", "48000", str(fx)], check=True)
     hits = [{"at": round(st.anchor(h["at"], at)["start"], 2), "volume": h.get("volume", 0.9)} for h in au.get("hits", [])]
-    tl = {"version": v, "total": round(total, 3), "fps": fps, "video": str(out.relative_to(st.dir)), "voice_fx": str(fx.relative_to(st.dir)),
+    tl = {"version": v, "total": round(total, 3), "fps": fps, "max_seconds": st.data.get("length", {}).get("max", 30), "video": str(out.relative_to(st.dir)), "voice_fx": str(fx.relative_to(st.dir)),
           "scenes": [{"id": sc, "start": round(scene_start[sc], 3), "end": round(scene_end[sc], 3)} for sc in order],
           "cues": [{"state": s, "at": round(t, 3)} for t, s, _ in cues], "whooshes": [round(x, 2) for x in whooshes], "hits": hits}
     st.out("build/timeline_v%d.json" % v).write_text(json.dumps(tl, indent=1))

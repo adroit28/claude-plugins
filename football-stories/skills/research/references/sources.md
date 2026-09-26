@@ -28,6 +28,8 @@ beyond "is everyone covering this" (personal, non-commercial).
    in the description.
 4. Quotes (F11) are copied verbatim from the source page, with the date and setting.
 5. Dates and ages: compute them (e.g. "18 months" = Feb 2025 → Aug 2026) and say so in the fact.
+   Day names too: `date -j -f %Y-%m-%d 2026-09-24 +%A`. Articles say "on Wednesday" relative to
+   their own publish date, so a copied day name can be wrong by a day.
 6. Current-world checks: managers, clubs and loans change. Verify today's state instead of
    assuming (the 2026 map differs from older knowledge: Mourinho at Real Madrid, Alonso at
    Chelsea, Salah at Trabzonspor, Maresca at City, as of Sep 2026).
