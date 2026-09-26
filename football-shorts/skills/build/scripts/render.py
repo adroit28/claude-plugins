@@ -253,7 +253,8 @@ class R:
         ln = au.get("loudnorm", "I=-14:TP=-1.5:LRA=11")
         if len(mix) > 1: fc += "%samix=inputs=%d:duration=first:normalize=0%s[a]" % ("".join(mix), len(mix), (",loudnorm=" + ln) if ln else "")
         else: fc += "[a0]%s[a]" % (("loudnorm=" + ln) if ln else "anull")
-        self.run([*inputs, "-filter_complex", fc, "-map", last, "-map", "[a]", *self.V, *self.A, "-movflags", "+faststart", "-t", "%.3f" % total, out])
+        vmap = "0:v" if last == "[0:v]" else last  # with no overlays there is no filter label to map
+        self.run([*inputs, "-filter_complex", fc, "-map", vmap, "-map", "[a]", *self.V, *self.A, "-movflags", "+faststart", "-t", "%.3f" % total, out])
         if bad: print("WARN %d segment(s) off by frames: %s. Fix the spec (whole-frame durations, clean footage after slow-mo windows) before trusting caption times." % (len(bad), bad), file=sys.stderr)
         print("rendered", out); return out
 
