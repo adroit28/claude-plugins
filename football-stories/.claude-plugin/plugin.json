@@ -1,0 +1,19 @@
+{
+  "name": "football-stories",
+  "version": "0.1.0",
+  "description": "Narrated football story Shorts with no footage: find and verify story ideas with two sources per fact, draft a fact-cited script, narrate it with a free or paid voice (Gemini TTS free tier, local Kokoro, your own recording) at a slightly slower pace, align the words with Whisper, build animated cards from a template library with word-timed captions, and revise from numbered feedback.",
+  "author": {
+    "name": "adroit28"
+  },
+  "keywords": [
+    "youtube",
+    "shorts",
+    "football",
+    "storytelling",
+    "tts",
+    "narration",
+    "motion-graphics"
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/adroit28/claude-plugins"
+}
