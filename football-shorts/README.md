@@ -108,6 +108,14 @@ Options:
   fails a spec without one (specs from before 1.4.0 included) and warns when the turn is
   outside 60–70 % of the length. Optional `bpm` snaps cuts to a beat grid.
 
+## Clean speech (1.5.0)
+
+- **Optional, asked first.** `enhance` offers `clean_speech.py` when a kept clip has speech over
+  music or crowd: cut the speech seconds, split the voice with Demucs (`htdemucs`), match the
+  loudness to the original, write a wav that plays as a `file` hit on a muted clip. Installs into
+  its own `shorts/.venv-demucs` and downloads the model only after an explicit yes
+  (`--install`); it prints a measured verdict and the fallback is always the original audio.
+
 ## Scripts by hand
 
 ```
@@ -130,6 +138,8 @@ $PY skills/build/scripts/check.py shorts/my-edit/my-edit_v1.mp4 --timeline short
 $PY skills/build/scripts/sheets.py compare shorts/my-edit/my-edit_v2.mp4 --ref shorts/my-edit/my-edit_v1.mp4 --at 7 12
 $PY skills/enhance/scripts/analyse.py ~/Downloads/clip.mp4 --out shorts/my-edit/build     # shots, letterbox box, dead air, loudness
 $PY skills/build/scripts/sheets.py fine ~/Downloads/clip.mp4 --from 0 --to 4 --fps 4 --crop 478:302:0:274
+python3 skills/enhance/scripts/clean_speech.py --install shorts          # once, only after a yes: venv + Demucs + model (~1 GB)
+python3 skills/enhance/scripts/clean_speech.py clip.mp4 --ss 12.4 --t 6.2 --out shorts/my-edit/build/clean/quote.wav --keep-work
 ```
 
 ## Rights
@@ -153,6 +163,6 @@ skills/build/references/{spec-format,plan-format,ffmpeg-recipes,channel-style}.m
 skills/build/scripts/{setup.sh,fetch.py,sheets.py,plan.py,spec.py,speclib.py,render.py,check.py,track.py,detect.py,cost.py}
 skills/enhance/SKILL.md
 skills/enhance/references/hook-playbook.md
-skills/enhance/scripts/analyse.py
+skills/enhance/scripts/{analyse,clean_speech}.py
 skills/revise/SKILL.md
 ```
