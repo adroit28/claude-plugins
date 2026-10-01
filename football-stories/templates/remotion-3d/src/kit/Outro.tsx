@@ -4,7 +4,7 @@ import { ramp } from "./anim";
 // Like & subscribe badge after the last narration word. No voice. OUTRO_S is the one place its
 // length is set: timing.ts adds it to the Short's duration, and the badge is gone on the last
 // frame so the loop back to frame 0 stays clean.
-export const OUTRO_S = 1.5;
+export const OUTRO_S = 3.0; // channel rule: the like & subscribe card is on screen 2.5 s at the very least, 3 s by default
 export const CHANNEL = "The Football Adda";
 export const HANDLE = "@footballaddaclub";
 export const OUTRO_TOP = 1300; // below the 3D subject, where the captions were
@@ -45,7 +45,8 @@ export const SubscribeBadge = ({ t, start }: { t: number; start: number }) => {
   const thumbS = interpolate(u, [0.15, 0.32, 0.42, 0.56, 0.62, 0.72, 0.84], [0, 1.2, 1, 1, 0.85, 1.12, 1], clamp);
   const liked = u >= 0.62;
   const subS = interpolate(u, [0.28, 0.46, 0.56], [0, 1.12, 1], { ...clamp, easing: Easing.out(Easing.quad) })
-    * interpolate(u, [0.82, 0.9, 1.02, 1.12], [1, 0.92, 1.06, 1], clamp);
+    * interpolate(u, [0.82, 0.9, 1.02, 1.12], [1, 0.92, 1.06, 1], clamp)
+    * (u > 1.3 ? 1 + 0.018 * Math.sin((u - 1.3) * 5) : 1); // idle pulse so the hold isn't frozen
   const shine = interpolate(u, [0.9, 1.25], [-30, 130], clamp);
 
   return (

@@ -59,3 +59,4 @@ revision is `story.v<N+1>.json` and `<slug>_v<N+1>.mp4`.
 - Paid takes: one per request unless the user asks for more; state the cost.
 - New or changed claims need facts with sources before they are narrated or put on a card.
 - Channel rules still apply (20–30 s or up to `length.max` ≤ 40, hook first, clean final card); if the user asks for something that breaks one, do it and note the rule in one line.
+- Every Short ends with the channel's like & subscribe card, 3 s by default and never under 2.5 s. `finish.py` re-appends it on every re-finish; `anim.py render` shows it from the kit with `outro.py` (story `outro_s`; `"outro": false` only if the user says so for that video) and `check.py` warns when it is missing. 3D explainers show the same card from the Remotion kit (`OUTRO_S` = 3.0). The 20–30 s length rule counts the content, not the card.

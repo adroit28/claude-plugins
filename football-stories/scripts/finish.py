@@ -6,6 +6,7 @@
 Reads build/timeline_v<N>.json from compose.py (and clips.py, which points it at the footage track). The video stream is copied (it was encoded once by
 compose.py). Audio: the voice mix, 48 Hz sine hits at the anchored words, an optional music bed
 from the story's assets, then loudnorm to -14 LUFS / -1.5 dBTP. AAC 160k 48 kHz stereo, +faststart.
+Last step: outro.py appends the 3 s like & subscribe card (re-encodes the video once; story "outro": false skips it).
 """
 import json, pathlib, subprocess, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -42,6 +43,11 @@ def main():
     out = st.mp4
     subprocess.run(["ffmpeg", "-v", "error", "-y", *inputs, "-filter_complex", fc, "-map", "0:v", "-map", "[a]", "-c:v", "copy",
                     "-c:a", "aac", "-b:a", "160k", "-ar", "48000", "-ac", "2", "-movflags", "+faststart", "-t", "%.3f" % total, str(out)], check=True)
+    if st.data.get("outro") is not False:  # every Short ends with the like & subscribe card; "outro": false in the story only if the user says so
+        from outro import append_outro
+        tl["outro_s"] = append_outro(out, seconds=st.data.get("outro_s", 3.0), force=True)
+        st.p("build/timeline_v%d.json" % st.version).write_text(json.dumps(tl, indent=1))
+        total += tl["outro_s"]
     print("finished", out, "%.2fs" % total, "hits", [h["at"] for h in tl["hits"]])
 
 

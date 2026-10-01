@@ -35,6 +35,7 @@ Assumptions: <one line, or "none">.
 - [ ] Element chips: one per character per shot, only for characters in that shot
 - [ ] Resolution 720p for this run
 - [ ] Generate button shows the cost for <N> s, not for one card
+- [ ] Finish (after download / stitching): run `outro.py <final.mp4>` to add the 3 s like & subscribe card
 
 ## Watch for
 

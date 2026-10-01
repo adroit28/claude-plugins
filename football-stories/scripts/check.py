@@ -81,12 +81,15 @@ def main():
     if abs(W / H - 9 / 16) > 0.01: warn.append("not 9:16")
     tl = json.load(open(a.timeline)) if a.timeline else None
     cap = (tl or {}).get("max_seconds", 30)
-    if dur > cap + 0.05: warn.append("over %g s (channel rule 20-30 s, up to 40 s when the user asked for longer; Shorts over 40 s never cleared 100 views)" % cap)
-    if dur < 13: warn.append("under 13 s")
+    outro = (tl or {}).get("outro_s", 0.0); body = dur - outro  # the end card is not counted in the channel's length rule
+    if outro: print("  incl. %.1f s like & subscribe card (content %.2f s)" % (outro, body))
+    elif tl is not None: warn.append("no like & subscribe end card: every video must end with one (outro.py)")
+    if body > cap + 0.05: warn.append("over %g s (channel rule 20-30 s, up to 40 s when the user asked for longer; Shorts over 40 s never cleared 100 views)" % cap)
+    if body < 13: warn.append("under 13 s")
     if au["peak"] is not None and au["peak"] > -1.0: warn.append("peak above -1 dBFS")
     if au["mean"] is not None and au["mean"] < -24: warn.append("quiet: mean below -24 dB")
     if au["blacks"]: warn.append("black frames at " + ", ".join("%s-%s" % b for b in au["blacks"]))
-    if tl and abs(tl["total"] - dur) > 0.1: warn.append("duration %.2f differs from planned %.2f" % (dur, tl["total"]))
+    if tl and abs(tl["total"] - dur) > 0.1 and abs(tl["total"] - body) > 0.1: warn.append("duration %.2f differs from planned %.2f" % (dur, tl["total"]))
     print("  " + ("WARN: " + "; ".join(warn) if warn else "no warnings"))
     build = os.path.join(os.path.dirname(os.path.abspath(a.video)), "build"); os.makedirs(build, exist_ok=True)
     name = os.path.splitext(os.path.basename(a.video))[0]

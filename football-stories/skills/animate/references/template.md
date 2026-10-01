@@ -50,7 +50,7 @@ Define the beat times once at the top: `const T = { sphere: at("L1", "sphere"), 
 | `pattern.tsx` | `PatternSphere({cells, colA, colB, twist, opacity, radius})`, `OCTA`, `CUBE`, `TETRA`, type `Cells` | shader sphere: nearest-cell colour with seams (spherical Voronoi, ≤ 32 cells), `kinds` 0/1 pick colA/colB, `twist` curves the seams. Panel layouts, regions, maps |
 | `Ring.tsx` | `Ring({opacity, color, position, radius, width})` | camera-facing highlight circle |
 | `overlays.tsx` | `Caption({t, until, max, y})`, `Counter({value, label, opacity, t, hitAt, hitColor, top})`, `Tag({t, at, over, value, under, color, opacity, top})`, `STROKE(px)`, `CAPTION_Y` | captions: up to 2 words, break at punctuation, y 1330, hidden from the badge on (Short.tsx does this). Counter top 230, Tag top 210 |
-| `Outro.tsx` | `SubscribeBadge({t, start})`, `OUTRO_S`, `CHANNEL`, `HANDLE`, `OUTRO_TOP` | 1.5 s: card in, thumbs-up pops and gets tapped blue, red SUBSCRIBE pops and is pressed with a shine, card out before the last frame. Change the length only in `OUTRO_S` |
+| `Outro.tsx` | `SubscribeBadge({t, start})`, `OUTRO_S`, `CHANNEL`, `HANDLE`, `OUTRO_TOP` | 3.0 s (min 2.5): card in, thumbs-up pops and gets tapped blue, red SUBSCRIBE pops and is pressed with a shine, card out before the last frame. Change the length only in `OUTRO_S` |
 
 ## Patterns from the worked example (`shorts/football-shape-test/anim/src/Scene.tsx`)
 

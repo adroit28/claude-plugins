@@ -6,7 +6,7 @@ The summary below is here so the skills still work when that file is absent.
 
 **Format.** 13–30 s. Open on the moment itself by second 2 (no still, no title
 card first: viewers drop in the first 3 s). Loop: the last beat should cut back
-into the first. Text changes every 1.5–2.5 s. Player-led beats club commentary.
+into the first; the like & subscribe card follows it (3 s, appended by the renderer). Text changes every 1.5–2.5 s. Player-led beats club commentary.
 
 **Titles.** 25–45 characters, player name, one claim + one emotion, CAPS on one
 punch word, an emoji pair (💀😂 / 😭❤️ / 🤯😭 / 🇰🇿⚡️), no questions, no

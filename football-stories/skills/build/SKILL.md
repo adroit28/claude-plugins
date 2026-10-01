@@ -13,7 +13,7 @@ the story file, so `revise` can change any of it later.
 | What | Where |
 |---|---|
 | Story | `${CLAUDE_PROJECT_DIR}/shorts/<slug>/story.v<N>.json` (`FOOTBALL_SHORTS_DIR` overrides `shorts/`) |
-| Scripts | `${CLAUDE_PLUGIN_ROOT}/scripts/{setup.sh,validate.py,cards.py,compose.py,clips.py,finish.py,check.py,cost.py}` |
+| Scripts | `${CLAUDE_PLUGIN_ROOT}/scripts/{setup.sh,validate.py,cards.py,compose.py,clips.py,finish.py,check.py,cost.py,outro.py}` |
 | Python | `PY=<shorts dir>/.venv/bin/python` from setup.sh (Pillow, faster-whisper) |
 | Footage tools | the football-shorts plugin: `ytsearch.py`, `fetch.py`, `sheets.py`. Find them with `find "${CLAUDE_PLUGIN_ROOT}/../.." ~/.claude/plugins -path "*football-shorts*" \( -name ytsearch.py -o -name fetch.py -o -name sheets.py \) 2>/dev/null`. If they're missing, ask the user to install football-shorts; don't improvise a downloader |
 | Shared | `shorts/fonts/` (Anton, Barlow Condensed, Montserrat; OFL), Google Chrome (card screenshots) |
@@ -47,8 +47,8 @@ the story file, so `revise` can change any of it later.
 4. **Cards.** `$PY cards.py <story>`, then Read `graphics/v<N>/sheet.png` (cyan box = graphics safe zone, magenta = caption band). Fix overflow, cramped text or anything outside the boxes (shorter props, `\n` line breaks) and re-run; unchanged cards are skipped.
 5. **Compose.** `$PY compose.py <story>` → picture track, voice + whoosh mix, `build/timeline_v<N>.json`. It fails loudly if anchors are out of order.
 6. **Clips** (only with `clips`). `$PY clips.py <story> --plan`, fix every warning (whip under footage, stretched crop, source too short), then `$PY clips.py <story>` → `build/graphics_v<N>_clips.mp4`, with the timeline pointed at it. Note its `CHECK_AT=` times. compose.py resets the timeline to the card-only track, so run clips.py after every compose; finish.py refuses to run until you do.
-7. **Finish.** `$PY finish.py <story>` → `<slug>_v<N>.mp4` (video stream copied, hits, optional bed, loudnorm −14 LUFS / −1.5 dBTP, +faststart).
-8. **Check.** `$PY check.py <slug>_v<N>.mp4 --timeline build/timeline_v<N>.json` and Read the sheet. With clips, also run `check.py <mp4> --at <CHECK_AT times>` and Read that sheet: no logo, score bug or watermark in any window, the subject in frame, no card text flashing around the box. Confirm: duration 20–30 s (or up to `length.max`), peak about −1.5 dB, no black frames, every caption legible and in the band, the spoken word highlighted, cards readable at phone size, the final card clean. Fix what you see and re-run the affected step; at most two internal passes, then hand over.
+7. **Finish.** `$PY finish.py <story>` → `<slug>_v<N>.mp4` (hits, optional bed, loudnorm −14 LUFS / −1.5 dBTP, +faststart), then `outro.py` appends the 3 s like & subscribe card (the video is re-encoded once for it).
+8. **Check.** `$PY check.py <slug>_v<N>.mp4 --timeline build/timeline_v<N>.json` and Read the sheet. With clips, also run `check.py <mp4> --at <CHECK_AT times>` and Read that sheet: no logo, score bug or watermark in any window, the subject in frame, no card text flashing around the box. Confirm: content 20–30 s (or up to `length.max`) plus the 3 s like & subscribe card at the end (check prints "incl. 3.0 s card"), peak about −1.5 dB, no black frames, every caption legible and in the band, the spoken word highlighted, cards readable at phone size, the final card clean. Fix what you see and re-run the affected step; at most two internal passes, then hand over.
 9. **Cost.** `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/cost.py --step "build v<N>" --slug <slug>` (run from the project root).
 10. **Hand over.** `open <mp4>`. In chat:
     - The path, the duration, and the scene timeline (start · scene · template · line). Captions are the script text.
@@ -66,3 +66,4 @@ the story file, so `revise` can change any of it later.
 - Footage only through `clips`, muted, after the user's explicit yes to downloads for this video (recorded as `rights.accepted`). Never claim anything reduces Content ID risk. Uploads stay manual.
 - Versions only go up; never overwrite an earlier story file, card folder or mp4. Never touch another session's edit folder (e.g. `shorts/ronaldo-wales/`).
 - Report what the check sheet shows, including problems you could not fix.
+- Every Short ends with the channel's like & subscribe card, 3 s by default and never under 2.5 s. `finish.py` appends it with `outro.py` (story `outro_s`; `"outro": false` only if the user says so for that video) and `check.py` warns when it is missing. 3D explainers show the same card from the Remotion kit (`OUTRO_S` = 3.0). The 20–30 s length rule counts the content, not the card.

@@ -17,7 +17,7 @@ over the first card. No title card, no "in this video".
 scene. No card static for more than 2.5 s.
 
 **Ending.** A short payoff line on its own card ("Remember the name."), captions
-hidden, so it reads as the end and loops back into the hook.
+hidden, so it reads as the end and loops back into the hook. The like & subscribe card (3 s) follows it.
 
 **Titles.** 25–45 characters, player name, one claim + one emotion, CAPS on one
 punch word, an emoji pair (💀😂 / 😭❤️ / 🤯😭 / 🇰🇿⚡️), no questions, no

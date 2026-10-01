@@ -94,6 +94,16 @@ brief's "Assumptions" line.
    still prompt the user can run through their image pipeline.
 9. **Offer the single-box Auto fallback** at the end of the brief, generated
    from the same shots, for when Custom misbehaves.
+10. **Like & subscribe end card.** The generated clip is never the final file:
+    every video ends with the channel's like & subscribe card, 3 s (never under
+    2.5 s). The brief's checklist carries a "Finish" line, and once the user has
+    the downloaded or stitched mp4 (or gives its path), run
+    `python3 "${CLAUDE_PLUGIN_ROOT}/skills/multishot/scripts/outro.py" <file> [--out <new.mp4>]`
+    with a python that has Pillow (the football-shorts venv `<shorts dir>/.venv/bin/python`
+    works). It holds the last frame, adds the card and ticks, and is a no-op
+    on a file that already has it. The card is extra to the generation length, so the
+    shot budget is unchanged. Offer to run it whenever the user shares a finished
+    clip; stitched multi-clip videos get it once, at the very end.
 
 ## Hard rules
 
@@ -116,6 +126,10 @@ brief's "Assumptions" line.
   "mouth closed" on each and "No speech in this shot." Every spoken line is
   a solo shot. Shared frames are for the silent opener and the closing
   freeze only.
+
+- **Every video ends with the like & subscribe card.** Never hand a video over
+  as final without it (3 s, never under 2.5 s); `scripts/outro.py` adds it.
+  Do not spend Kling shot seconds on it.
 
 ## Output in the conversation
 

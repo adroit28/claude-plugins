@@ -467,13 +467,14 @@ class R:
         rows, total = self.timeline()
         print("%-3s %-7s %-7s %-6s %-9s %-14s %-6s %s" % ("#", "start", "end", "dur", "type", "label", "src", "ss"))
         for r in rows: print("%-3d %-7.2f %-7.2f %-6.2f %-9s %-14s %-6s %s" % (r["i"], r["start"], r["end"], r["dur"], r["type"], r["label"][:14], r["src"] or "-", r["ss"] if r["ss"] is not None else "-"))
-        print("total %.2fs" % total)
+        print("total %.2fs (+%.1fs like & subscribe card)" % (total, 0.0 if self.spec.get("outro") is False else max(float(self.spec.get("outro_s", 3.0)), 2.5)))
         if total > self.spec.get("max_duration", 35): print("WARNING: over %ss; the channel rule is 13-30 s" % self.spec.get("max_duration", 35))
         for o in self.spec.get("overlays", []):
             if o["to"] > total + 0.01: print("WARNING: overlay %s ends at %s, after the video (%.2f)" % (o.get("big") or o.get("small") or o.get("png") or o.get("video"), o["to"], total))
         ver = self.spec.get("version", 1); slug = self.spec.get("slug", "short")
         out = os.path.join(self.dir, self.spec.get("out") or "%s_v%s.mp4" % (slug, ver))
-        json.dump({"total": total, "segments": rows, "out": out}, open(os.path.join(self.B, "timeline_v%s.json" % ver), "w"), indent=1)
+        outro_s = 0.0 if self.spec.get("outro") is False else max(float(self.spec.get("outro_s", 3.0)), 2.5)
+        json.dump({"total": total, "segments": rows, "out": out, "outro_s": outro_s}, open(os.path.join(self.B, "timeline_v%s.json" % ver), "w"), indent=1)
         if dry: return out
         segs, bad = [], []
         for i, s in enumerate(self.spec["segments"]):
@@ -525,6 +526,9 @@ class R:
         else: fc += "[a0]%s[a]" % (("loudnorm=" + ln) if ln else "anull")
         vmap = "0:v" if last == "[0:v]" else last  # with no overlays there is no filter label to map
         self.run([*inputs, "-filter_complex", fc, "-map", vmap, "-map", "[a]", *self.V, *self.A, "-movflags", "+faststart", "-t", "%.3f" % total, out])
+        if outro_s:  # every Short ends with the like & subscribe card (spec "outro": false only when the user says so)
+            from outro import append_outro
+            append_outro(out, seconds=outro_s, force=True)
         if bad: print("WARN %d segment(s) off by frames: %s. Fix the spec (whole-frame durations, clean footage after slow-mo windows) before trusting caption times." % (len(bad), bad), file=sys.stderr)
         print("rendered", out); return out
 

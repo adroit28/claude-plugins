@@ -44,3 +44,4 @@ source of truth; every revision is a new spec version and a new file.
 - Show the changed seconds on a sheet; do not claim a fix from the numbers alone.
 - Channel rules still apply (open on the moment, 13–30 s, captions inside safe zones); if the user asks for something that breaks one, do it and note the rule in one line.
 - Rights do not change with the edit; repeat the risk line from the build hand-over.
+- Every Short ends with the channel's like & subscribe card, 3 s by default and never under 2.5 s (spec `outro_s`). `render.py` re-appends it on every re-render with `outro.py`, so a normal render has it; `check.py` warns when it is missing. Never set `"outro": false` unless the user says so for that video. The 13–30 s length rule counts the content, not the card.

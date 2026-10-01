@@ -166,3 +166,7 @@ skills/enhance/references/hook-playbook.md
 skills/enhance/scripts/{analyse,clean_speech}.py
 skills/revise/SKILL.md
 ```
+
+## Like & subscribe end card
+
+Every video these skills make ends with the channel's like & subscribe card, 3 s by default and never under 2.5 s. It is added by `outro.py` (one copy per plugin), called automatically by the renderer (`render.py` / `finish.py`, or the Remotion kit for 3D explainers); for a file made elsewhere run `python3 outro.py <video.mp4>` with a Pillow python. Re-running is a no-op on a tagged file.

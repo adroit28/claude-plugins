@@ -67,7 +67,7 @@ If the user gives only an idea or a topic, stop and send them to `/football-stor
    - Overlays: numbers/tags in the top band (y 200–560), captions at y 1330, the subject between; nothing on the subject.
    - `npx tsc --noEmit -p .` must pass. Preview tricky moments with `python3 anim.py render <story> --frames a-b` or `npx remotion still src/index.ts Short out/x.png --frame=N --gl=angle` and Read them.
 
-8. **Outro.** Nothing to write: `Short.tsx` shows `SubscribeBadge` (thumbs-up tap, red SUBSCRIBE pop, "The Football Adda", @footballaddaclub) for `OUTRO_S` = 1.5 s after the last word (one constant in `kit/Outro.tsx`), no voice, gone on the last frame. The scene must finish its loop during it (`LAST_T`).
+8. **Outro.** Nothing to write: `Short.tsx` shows `SubscribeBadge` (thumbs-up tap, red SUBSCRIBE pop, "The Football Adda", @footballaddaclub) for `OUTRO_S` = 3.0 s after the last word (one constant in `kit/Outro.tsx`; channel rule: at least 2.5 s, never shorten it), no voice, gone on the last frame. The scene must finish its loop during it (`LAST_T`).
 
 9. **Render + check.** `python3 anim.py render <story>`: `npx remotion render ... --gl=angle` → `anim/out/raw_v<N>.mp4` → loudnorm I=-14:TP=-1.5:LRA=11 (video copied, AAC 192k) → `<slug>_v<N>.mp4`, then the check: a 1 fps sheet of the whole Short, frames at every spoken number (+0.35 s) and the first/last frame in `build/check/`, loudness, and the loop SSIM (frame 0 vs last frame above the captions; aim ≥ 0.98). Add `--at` for tag moments on non-number words (`anim.py check <story> --at ...`). Read every sheet and confirm: nothing clipped at the frame edges, overlays never on the main object, each change lands on its word, captions legible, the badge clean. Fix and re-render before showing the user (the mp4 can't be overwritten: for a re-render of the same version, the user may delete it, or copy the story to the next version as revise does). At most two internal passes; report what you could not fix.
 
@@ -93,3 +93,4 @@ If the user gives only an idea or a topic, stop and send them to `/football-stor
 - One free take per request; never loop takes. No paid voice unless the user asks.
 - Versions only go up; never overwrite an earlier story file or mp4. Never touch another session's edit folder.
 - Keys stay in `~/.config/…/.env`; none in the story, the anim project or the plugin.
+- Every video ends with the like & subscribe card for at least 2.5 s (`OUTRO_S` = 3.0 in `kit/Outro.tsx`). Never remove `SubscribeBadge` from `Short.tsx` or shorten `OUTRO_S` below 2.5. An `anim/` project made before this rule keeps its old `OUTRO_S`: copy the template's `src/kit/Outro.tsx` over it before rendering a new version.

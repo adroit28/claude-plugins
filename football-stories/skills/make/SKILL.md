@@ -42,3 +42,5 @@ notes from the prompt. A footage yes recorded in the handoff covers this video o
 All hard rules of the four skills apply. In particular: no fact without a source, one paid take
 per request, no downloads without an explicit yes (per video), uploads stay manual, and the description
 carries "Narration voice is AI-generated."
+
+Every Short ends with the like & subscribe card (3 s, never under 2.5 s): `finish.py` appends it, the 3D explainer kit draws it. Do not hand over a video without it.

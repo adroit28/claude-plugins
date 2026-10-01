@@ -89,16 +89,19 @@ def main():
     print("%s\n  %dx%d @ %.3f fps, %.2f s, %s frames, %.1f MB" % (a.video, W, H, fps, dur, nb, size))
     print("  audio peak %s dB, mean %s dB" % (peak.group(1) if peak else "?", mean.group(1) if mean else "?"))
     warn = []
+    tl = json.load(open(a.timeline)) if a.timeline else None
+    outro = (tl or {}).get("outro_s", 0.0); body = dur - outro  # the like & subscribe card is not counted in the channel's length rule
+    if outro: print("  incl. %.1f s like & subscribe card (content %.2f s)" % (outro, body))
+    elif tl is not None: warn.append("no like & subscribe end card: every video must end with one (outro.py)")
     if W / H != 9 / 16 and abs(W / H - 0.5625) > 0.01: warn.append("not 9:16")
-    if dur > 35: warn.append("over 35 s (channel rule 13-30 s)")
-    if dur < 10: warn.append("under 10 s")
+    if body > 35: warn.append("over 35 s (channel rule 13-30 s)")
+    if body < 10: warn.append("under 10 s")
     if peak and float(peak.group(1)) > -1.0: warn.append("peak above -1 dBFS")
     if mean and float(mean.group(1)) < -24: warn.append("quiet: mean below -24 dB")
     if blacks: warn.append("black frames at " + ", ".join("%s-%s" % b for b in blacks))
-    tl = json.load(open(a.timeline)) if a.timeline else None
-    if tl and abs(tl["total"] - dur) > 0.2: warn.append("duration %.2f differs from planned %.2f" % (dur, tl["total"]))
+    if tl and abs(tl["total"] - body) > 0.2: warn.append("duration %.2f differs from planned %.2f" % (body, tl["total"]))
     print("  " + ("WARN: " + "; ".join(warn) if warn else "no warnings"))
-    if a.spec and tl: sp = json.load(open(a.spec)); retention(sp, tl, dur, mean); story(sp, tl, dur)
+    if a.spec and tl: sp = json.load(open(a.spec)); retention(sp, tl, body, mean); story(sp, tl, body)
     every = a.every or (None if tl else 1.0)
     times = a.at or ([round(k * every, 3) for k in range(int(dur / every) + 1) if k * every < dur] if every else [])
     if tl and not a.at:
