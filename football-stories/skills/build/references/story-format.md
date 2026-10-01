@@ -75,6 +75,14 @@ Working example: `shorts/satpayev-rebuild/story.v1.json` (rebuilds `satpayev-fif
   "bed": {"asset": "music_key", "volume": 0.12, "fade_out": 1.0},   // optional, licensed/cc/own only
   "loudness": {"I": -14, "TP": -1.5, "LRA": 11}
  },
+ // 3D explainers (/football-stories:animate) use these instead of scenes/clips/cards:
+ //   "format": "explainer-3d",
+ //   "narration": {..., "audio": "build/narration_alnilam_p100_tight.wav",
+ //     "edit": {"from": "build/narration_alnilam_p100.wav", "between": 0.35, "within": 0.25, "numbers": 0.30,
+ //              "hook": 0.45, "tail": 0.6, "pauses": [], "duration": 26.75, "numbers_patched": ["L4:11", "L6:6"]}},  // tighten.py
+ //   "anim": {"dir": "anim", "template": "remotion-3d", "composition": "Short",                                    // anim.py init
+ //            "storyboard": "storyboard.md", "reference": "reference-breakdown.md",                                // animate skill
+ //            "render": {"raw": "anim/out/raw_v1.mp4", "mp4": "x_v1.mp4", "duration": 28.03, "date": "2026-10-01"}} // anim.py render
  "disclosure": {"altered_or_synthetic": false, "ai_voice": true, "description_note": "Narration voice is AI-generated."},
  "publish": {"title": "...", "description": "...", "hashtags": ["#football", "#footballshorts"]}
 }
@@ -91,5 +99,8 @@ Working example: `shorts/satpayev-rebuild/story.v1.json` (rebuilds `satpayev-fif
 | `build/graphics_v<N>_clips.mp4` (timeline `video` repointed, `clips` added) | clips.py |
 | `src/*.mp4`, `src/sources.json` | football-shorts fetch.py (footage, after the user's yes) |
 | `handoff.md` (prompt for a fresh session once the script is approved) | research skill |
-| `<slug>_v<N>.mp4` | finish.py |
+| `<slug>_v<N>.mp4` | finish.py (cards) or anim.py render (3D) |
+| `build/narration_<voice>_p<pace>_tight.wav` + its words file | tighten.py |
+| `anim/` (Remotion project), `anim/out/raw_v<N>.mp4`, `build/check/*.png` | anim.py init / render / check |
+| `storyboard.md`, `reference-breakdown.md`, `src/ref.mp4` | animate skill (reference only with the user's yes) |
 | `build/check_<name>.png`, `build/compare_<new>_vs_<ref>.png` | check.py |

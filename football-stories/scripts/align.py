@@ -17,17 +17,17 @@ from common import Story
 norm = lambda t: re.sub(r"[^a-z0-9]", "", t.lower())
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("story"); ap.add_argument("--audio"); ap.add_argument("--model", default="small.en")
-    ap.add_argument("--no-update", action="store_true")
-    a = ap.parse_args()
-    st = Story(a.story)
-    wav = st.p(a.audio or st.data["narration"].get("audio") or sys.exit("no narration.audio: run tts.py first"))
-    from faster_whisper import WhisperModel
-    m = WhisperModel(a.model, device="cpu", compute_type="int8")
-    segs, _ = m.transcribe(str(wav), word_timestamps=True, language="en", beam_size=5)
-    heard = [(w.word.strip(), w.start, w.end) for s in segs for w in s.words]
+def transcribe(wav, model="small.en"):
+    """Whisper word pass -> [(word, start, end)]. `model` is a name or a loaded WhisperModel."""
+    if isinstance(model, str):
+        from faster_whisper import WhisperModel
+        model = WhisperModel(model, device="cpu", compute_type="int8")
+    segs, _ = model.transcribe(str(wav), word_timestamps=True, language="en", beam_size=5)
+    return [(w.word.strip(), w.start, w.end) for s in segs for w in s.words]
+
+
+def align(st, wav, heard):
+    """Script words timed from `heard` -> (words, report), written to build/words_<wav>.json and build/align_<wav>.json."""
     want = st.script_words()
     sm = difflib.SequenceMatcher(a=[norm(w) for _, _, w in want], b=[norm(h[0]) for h in heard], autojunk=False)
     blocks = sm.get_matching_blocks()
@@ -57,11 +57,25 @@ def main():
     words_path = st.build / ("words_%s.json" % wav.stem)
     words_path.write_text(json.dumps(out, indent=1))
     matched = sum(n for _, _, n in blocks)
-    report = {"audio": str(wav.relative_to(st.dir)), "matched": matched, "total": len(want), "heard": " ".join(h[0] for h in heard), "flags": flags}
+    report = {"audio": str(wav.relative_to(st.dir)), "matched": matched, "total": len(want), "heard": " ".join(h[0] for h in heard),
+              "flags": flags, "words": str(words_path.relative_to(st.dir))}
     (st.build / ("align_%s.json" % wav.stem)).write_text(json.dumps(report, indent=1, ensure_ascii=False))
+    return out, report
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("story"); ap.add_argument("--audio"); ap.add_argument("--model", default="small.en")
+    ap.add_argument("--no-update", action="store_true")
+    a = ap.parse_args()
+    st = Story(a.story)
+    wav = st.p(a.audio or st.data["narration"].get("audio") or sys.exit("no narration.audio: run tts.py first"))
+    out, report = align(st, wav, transcribe(wav, a.model))
+    flags, want = report["flags"], st.script_words()
+    words_path = st.p(report["words"])
 
     print("heard:", report["heard"])
-    print("matched %d/%d script words -> %s" % (matched, len(want), words_path.relative_to(st.dir)))
+    print("matched %d/%d script words -> %s" % (report["matched"], len(want), words_path.relative_to(st.dir)))
     for L in st.lines:
         ws = [o for o in out if o["line"] == L["id"]]
         print("%s %6.2f-%6.2f  %s" % (L["id"], ws[0]["start"], ws[-1]["end"], L["text"]))
@@ -73,7 +87,8 @@ def main():
             print("CHECK %s word %d: script %r, heard %r (similarity %.2f): possible mispronunciation; %s"
                   % (f["line"], f["i"], f["script"], f["heard"], f["similarity"], tip))
         else:
-            print("note  %s word %d %r not matched (heard %r); timing interpolated" % (f["line"], f["i"], f["script"], f["heard"]))
+            print("note  %s word %d %r not matched (heard %r); timing interpolated%s" % (f["line"], f["i"], f["script"], f["heard"],
+                  " (a spoken number: tighten.py patches its time)" if f["heard"] and re.search(r"\d", f["heard"]) else ""))
 
     if not a.no_update and not st.rendered():
         st.data["narration"]["words"] = str(words_path.relative_to(st.dir)); st.save()

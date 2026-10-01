@@ -10,6 +10,7 @@ search, download and contact-sheet tools only when you want clips in a story.
 | `/football-stories:research` | Finds story leads (news RSS, r/soccer RSS, Wikipedia on-this-day, dated web searches), verifies each fact with two sources where possible, writes ranked story cards; after you pick one, drafts `story.v1.json` with a fact id on every line, and once you approve it writes `handoff.md`, a prompt to continue in a fresh (cheaper) session. |
 | `/football-stories:narrate` | Voice options (free by default), one take, pace (default 0.93, slightly slower than Gemini's natural read), Whisper word alignment, mispronunciation flags. Also takes your own recording. |
 | `/football-stories:build` | Template cards (HTML → headless Chrome), a Pillow frame loop with zooms, crossfades, whips and 3-word captions, optional muted footage clips anchored to words (logos and score bugs cropped or erased), whooshes and bass hits, loudnorm −14 LUFS, a check sheet, and a hand-over with title, description, hashtags and the AI-voice note. |
+| `/football-stories:animate` | A 3D-animated explainer instead of cards: optional reference-video breakdown (download only with your yes), a one-shot-per-line storyboard for your OK, the Gemini `alnilam` voice with silences tightened in post (`tighten.py`) and exact times for spoken numbers, a Remotion + three.js scene on the `templates/remotion-3d` kit (camera rig, polygon panels, shader pattern sphere, ring, counters, tags, 2-word captions), a 1.5 s like & subscribe outro that loops back to frame 0, render, loudnorm −14 LUFS, frame and loop checks, and a hand-over. Needs Node and npm (tested with Node 26, npm 11). |
 | `/football-stories:revise` | Numbered feedback → the next story version, re-rendering only what changed, with before/after frames. |
 | `/football-stories:make` | All of the above in order, stopping for you to pick the story, approve facts and script, and approve the voice. |
 | `football-stories:fact-finder` (agent) | The cheap worker behind `research` (and new facts in `revise`): runs discover.py and the searches, opens the sources and returns every fact with URL, publisher, date and the verbatim supporting sentence, on `sonnet`. The session model spot-checks, judges and writes. |
@@ -21,7 +22,7 @@ search, download and contact-sheet tools only when you want clips in a story.
 /plugin install football-stories@adroit-plugins
 ```
 
-Requirements: macOS, Homebrew `ffmpeg`, Google Chrome, Python 3, the OFL fonts Anton,
+Requirements: macOS, Homebrew `ffmpeg`, Google Chrome, Python 3 (plus Node and npm for `animate`), the OFL fonts Anton,
 Barlow Condensed (SemiBold, ExtraBold) and Montserrat in `shorts/fonts/`.
 `scripts/setup.sh` checks everything and creates `shorts/.venv` with Pillow and faster-whisper;
 `setup.sh --kokoro` adds the offline Kokoro voice (~350 MB model, once).
@@ -55,6 +56,7 @@ Details and verification dates: `skills/narrate/references/voices.md`.
 /football-stories:narrate shorts/keane-haaland/story.v1.json voice: gemini:en-in-storyteller-11
 /football-stories:narrate use my recording ~/Downloads/voice-note.m4a
 /football-stories:build
+/football-stories:animate shorts/football-shape/story.v1.json
 /football-stories:revise 1. slower 2. the timeline card says 1997 twice 3. hit on "faking"
 ```
 
@@ -91,7 +93,15 @@ $PY $S/finish.py shorts/x/story.v1.json
 $PY $S/check.py shorts/x/x_v1.mp4 --timeline shorts/x/build/timeline_v1.json
 $PY $S/check.py shorts/x/x_v2.mp4 --ref shorts/x/x_v1.mp4 --at 5 12
 python3 $S/cost.py --step build --slug x          # Claude cost: this step / session / video
+# 3D explainer (animate)
+$PY $S/tighten.py shorts/x/story.v1.json          # cut silences, re-align, patch spoken-number times
+$PY $S/tighten.py shorts/x/story.v1.json --words-only   # audio already tight: align + numbers only
+python3 $S/anim.py init shorts/x/story.v1.json    # scaffold shorts/x/anim from templates/remotion-3d, npm ci
+python3 $S/anim.py render shorts/x/story.v1.json [--frames 0-120]   # render + loudnorm + check sheets
+python3 $S/anim.py check shorts/x/story.v1.json --at 7.5 12.0
 ```
+
+Reference 3D build: `shorts/football-shape-test/` rebuilds `football-shape_v1.mp4` on the template.
 
 Reference build: `shorts/satpayev-rebuild/` reproduces `satpayev-fifa-wait_v2.mp4` (same cards
 pixel for pixel, identical picture track, same length and loudness).
@@ -109,10 +119,12 @@ pixel for pixel, identical picture track, same length and loudness).
 ```
 .claude-plugin/plugin.json
 agents/fact-finder.md
-scripts/{setup.sh,common.py,discover.py,validate.py,tts.py,align.py,cards.py,compose.py,clips.py,finish.py,check.py,cost.py}
+scripts/{setup.sh,common.py,discover.py,validate.py,tts.py,align.py,tighten.py,cards.py,compose.py,clips.py,finish.py,check.py,anim.py,cost.py}
+templates/remotion-3d/   Remotion + three.js project copied into shorts/<slug>/anim (kit/, timing.ts, Short.tsx, starter Scene.tsx, examples/ball.ts)
 skills/research/SKILL.md + references/{formats,story-card,sources}.md
 skills/narrate/SKILL.md  + references/voices.md
 skills/build/SKILL.md    + references/{story-format,templates,channel-style}.md, template-demo.json
+skills/animate/SKILL.md  + references/template.md
 skills/revise/SKILL.md
 skills/make/SKILL.md
 ```

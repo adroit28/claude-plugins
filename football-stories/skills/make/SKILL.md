@@ -13,10 +13,10 @@ SKILL.md when you reach it and follow it exactly; this file only sets the order 
 | 1 | `research` (cards) | the user picks a card |
 | 2 | `research` (script) | the user approves the facts and the script table (edits welcome) → set `signed_off`, then write `handoff.md` and show the prompt for a fresh session (research step 5). Stop there, even if the user said "do the whole thing": they choose a new session (cheaper) or "continue here" |
 | 3 | `narrate` | the user picks a voice (default `free`; mention the paid key ≈₹0.65) and approves the take after listening, including any pronunciation flags |
-| 4 | `build` | ask about footage if the handoff or the user wants real clips and no yes to downloads is recorded for this video; otherwise none inside: hand over the mp4 with metadata |
+| 4 | `build` (or `animate` when the story's format is `explainer-3d` or the user wants a 3D explainer: it also replaces step 3, with its fixed voice and a storyboard checkpoint) | ask about footage if the handoff or the user wants real clips and no yes to downloads is recorded for this video; otherwise none inside: hand over the mp4 with metadata |
 | 5 | `revise` | on the user's numbered feedback |
 
-Skill files: `${CLAUDE_PLUGIN_ROOT}/skills/{research,narrate,build,revise}/SKILL.md`.
+Skill files: `${CLAUDE_PLUGIN_ROOT}/skills/{research,narrate,build,animate,revise}/SKILL.md`.
 
 After every step, run `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/cost.py --step "<step>" [--slug <slug>]`
 from the project root and put its lines in that step's report (each skill says where).

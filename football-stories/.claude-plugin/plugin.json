@@ -1,7 +1,7 @@
 {
   "name": "football-stories",
-  "version": "0.3.0",
-  "description": "Narrated football story Shorts: find and verify story ideas with two sources per fact (evidence legwork on a cheaper Sonnet subagent, judgement on the session model), draft a fact-cited script, then hand off to a fresh session; narrate it with a free or paid voice (Gemini TTS free tier, local Kokoro, your own recording), align the words with Whisper, build animated cards from a template library with word-timed captions and optional muted footage clips, revise from numbered feedback, and report the Claude cost after each step.",
+  "version": "0.4.0",
+  "description": "Narrated football story Shorts: find and verify story ideas with two sources per fact (evidence legwork on a cheaper Sonnet subagent, judgement on the session model), draft a fact-cited script, then hand off to a fresh session; narrate it with a free or paid voice (Gemini TTS free tier, local Kokoro, your own recording), align the words with Whisper, build animated cards from a template library with word-timed captions and optional muted footage clips, or a 3D-animated explainer with Remotion + three.js (storyboard, tightened narration, like & subscribe loop ending), revise from numbered feedback, and report the Claude cost after each step.",
   "author": {
     "name": "adroit28"
   },
@@ -12,7 +12,9 @@
     "storytelling",
     "tts",
     "narration",
-    "motion-graphics"
+    "motion-graphics",
+    "3d-animation",
+    "remotion"
   ],
   "license": "MIT",
   "repository": "https://github.com/adroit28/claude-plugins"

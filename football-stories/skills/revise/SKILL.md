@@ -25,6 +25,8 @@ revision is `story.v<N+1>.json` and `<slug>_v<N+1>.mp4`.
 
 ## Procedure
 
+**3D explainers** (`format: explainer-3d`, made by `animate`): copy the story to the next version, change `anim/src/Scene.tsx` (shots, camera keys, overlays), re-voice only if the words change (then `tighten.py`), and run `anim.py render` on the new story; skip the card, compose and finish steps below. Before/after frames: `sheets.py compare <new.mp4> --ref <old.mp4> --at ...`.
+
 1. **Locate.** Highest `story.v<N>.json`, its mp4, `build/timeline_v<N>.json`, `notes.md`. A time the user names ("at 14 s") maps to a scene and state through the timeline's `cues`; say which.
 2. **Translate** each item into one line: `#k "<their words>" → <field> : <change> → <steps to re-run>`.
 
