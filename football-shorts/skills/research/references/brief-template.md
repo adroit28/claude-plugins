@@ -9,7 +9,7 @@ Window searched: last 48 h (events from <date> to <date>) · Tools: WebSearch ×
 2. ...
 3. ...
 
-## RANKED IDEAS (5)
+## RANKED IDEAS (5: 1–3 in full, 4–5 one line each)
 
 ### 1. IDEA: <title>
 - TREND SCORE: 1–10 (freshness · momentum · visual hook · emotion · story · vertical fit)
@@ -30,15 +30,21 @@ Window searched: last 48 h (events from <date> to <date>) · Tools: WebSearch ×
 - RIGHTS / RISK: per source class → Low / Med / High, one line why. No claims that the edit reduces it.
 
 ### 2. …  (same fields)
+### 3. …  (same fields)
+
+### 4. <title> — trend <n>/10 · event <date> · <best source URL> · risk Low/Med/High · why it ranks below the top 3
+### 5. …  (same one line; build writes the EDIT PLAN if the user picks it)
 
 ## RESEARCHED BUT REJECTED
 - <idea> — reason (stale / no clean source / weak visual / all reposts / rights)
 
 ## CANDIDATE TABLE
-(paste from candidates-<date>.md, top 20 rows by views/h)
+(paste from the sweep's Videos table, top 20 rows by views/h)
 
 ## METHOD & CAVEATS
 - queries run, browser pass yes/no, what could not be verified
 - reminder: fetching sources breaks YouTube ToS; broadcaster/club footage = Content ID risk regardless of edits
 ```
 Keep the field names exactly; the build skill reads SOURCES and EDIT PLAN by name.
+Ideas 4–5 are one-liners to save output from the expensive model; the build skill
+designs their EDIT PLAN if the user picks one.

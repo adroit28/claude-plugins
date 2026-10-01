@@ -14,6 +14,8 @@ yuv420p, fixed fps, aac 160k 48 kHz stereo) and frame-pinned so the concat never
 drifts.
 """
 import argparse, hashlib, json, math, os, subprocess, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from speclib import ramp_params, ramp_total  # ramp maths shared with plan.py/spec.py/track.py
 try:
     from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 except ImportError:
@@ -22,6 +24,123 @@ except ImportError:
 FONT_BIG = os.environ.get("FS_FONT_BIG", "/System/Library/Fonts/Supplemental/Impact.ttf")
 FONT_SMALL = os.environ.get("FS_FONT_SMALL", "/System/Library/Fonts/Supplemental/Arial Bold.ttf")
 FONT_EMOJI = os.environ.get("FS_FONT_EMOJI", "/System/Library/Fonts/Apple Color Emoji.ttc")
+
+# ---------- reframe: a crop window that follows a track (detect.py --auto / detect.py / track.py), shared with track.py
+def probe_wh(path):
+    out = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0", path],
+                         capture_output=True, text=True).stdout.strip().split(",")
+    return int(out[0]), int(out[1])
+
+def minjerk(u): return u * u * u * (10 - 15 * u + 6 * u * u)
+
+class Reframe:
+    """Window path for `"crop": {"reframe": "build/g3.json", "w", "h", "lead": 0.15, "dz": 0.06, "min_pan": 0.35, "pre"}`.
+
+    Source-elapsed time u (0 at the segment's ss; ffmpeg's crop `t`, which runs before any speed change, so
+    clip speed, slowmo and reverse all use the same path). The smoothed target (track centre `lead` s ahead)
+    is turned into holds and min-jerk pans: the window holds until the target leaves a dead zone of `dz` x
+    window width, then eases to where the target settles over at least `min_pan` s, pan speed at most 1.5
+    window widths/s. That is written as one nested if() crop expression (<= 8 pans; the dead zone widens
+    until it fits), so ffmpeg does it in the crop filter with no per-frame work. ffmpeg fixes crop w/h per
+    segment, so the wide fallback (track missing for over half the segment, or the subject wider than 60 % of
+    the box) holds for the whole segment: full box with fill, else a fixed window at the median target."""
+    def __init__(self, c, s, base, src_wh, box, W, H):
+        from track import load_track, at
+        self.c = c; pts = load_track(os.path.join(base, c["reframe"]))
+        bw, bh, bx, by = box; fill = [bw, bh] != list(src_wh) or c.get("fill")
+        if fill: h = bh; w = int(c.get("w") or round(bh * 1.25))
+        elif c.get("w"): w = int(c["w"]); h = int(c.get("h") or round(w * H / W))
+        else: h = bh; w = int(round(h * W / H))
+        w, h = min(w - w % 2, bw), min(h - h % 2, bh); self.w, self.h = w, h
+        dur = 0.0 if s["type"] == "still" else s["t"]; t0 = s["at"] if s["type"] == "still" else s["ss"]
+        lead = c.get("lead", 0.15); dt = 0.02; n = max(int(round(dur / dt)), 0)
+        us = [k * dt for k in range(n + 1)]
+        raw = []
+        for u in us:
+            p = at(pts, t0 + u + lead) or at(pts, t0 + u)
+            raw.append(p)
+        ok = [k for k, p in enumerate(raw) if p]
+        self.note = None
+        clamp_x = lambda x: min(max(x, bx), bx + bw - w)
+        ext = sorted(raw[k][2] for k in ok)
+        if not ok or len(ok) < 0.5 * len(us) or (ext and ext[len(ext) // 2] > 0.6 * bw):
+            why = "no track in the window" if not ok else ("track covers %d%% of the segment" % (100 * len(ok) // len(us)) if len(ok) < 0.5 * len(us) else "subject wider than 60%% of the box")
+            if fill: self.w, self.h, self.y = bw, bh, by; self.keys = [(0, bx, bx)]
+            else:
+                mx = sorted(raw[k][0] for k in ok)[len(ok) // 2] if ok else bx + bw / 2
+                self.y = by + (bh - h) // 2; self.keys = [(0, clamp_x(mx - w / 2), None)]
+            self.pans = []; self.note = "reframe %s: %s, wide fallback" % (c["reframe"], why); return
+        # hold gaps up to 0.5 s with the nearest known point
+        for k in range(len(raw)):
+            if not raw[k]:
+                j = min(ok, key=lambda q: abs(q - k))
+                if abs(j - k) * dt <= 0.5: raw[k] = raw[j]
+        tx = [clamp_x(p[0] - w / 2) if p else None for p in raw]
+        for k in range(len(tx)):
+            if tx[k] is None: tx[k] = tx[min(ok, key=lambda q: abs(q - k))]
+        cys = sorted(p[1] for p in raw if p)
+        self.y = min(max(int(cys[len(cys) // 2] - h / 2), by), by + bh - h) if h < bh else by
+        sig = 6  # gaussian smoothing, sigma 0.12 s
+        ker = [math.exp(-0.5 * (i / sig) ** 2) for i in range(-3 * sig, 3 * sig + 1)]
+        sm = []
+        for k in range(len(tx)):
+            num = den = 0.0
+            for i, kw in enumerate(ker):
+                j = min(max(k + i - 3 * sig, 0), len(tx) - 1); num += tx[j] * kw; den += kw
+            sm.append(num / den)
+        dz = c.get("dz", 0.06) * w
+        for _ in range(8):
+            pans = self.plan(us, sm, dz, c.get("min_pan", 0.35), 1.5 * w, dur)
+            if len(pans) <= 8: break
+            dz *= 1.5
+        self.pans = pans; x0 = sm[0] if not pans or pans[0][0] > 0 else pans[0][2]
+        self.keys = [(0, x0, None)]
+
+    @staticmethod
+    def plan(us, sm, dz, min_pan, vmax, dur):
+        pans, cam, k = [], sm[0], 0
+        while k < len(us):
+            if abs(sm[k] - cam) <= dz: k += 1; continue
+            d = 1 if sm[k] > cam else -1; j = k
+            while j + 1 < len(us) and (sm[j + 1] - sm[j]) * d > 0.3: j += 1  # ride the move until the target settles
+            x1 = sm[j]; T = max(min_pan, 1.875 * abs(x1 - cam) / vmax, us[j] - us[k])
+            lo = pans[-1][1] if pans else 0.0
+            a = max(min(us[k] - T / 3, dur - T), lo); b = min(a + T, max(dur, a + 1e-3))  # near the end, start earlier rather than rush
+            if pans and a - pans[-1][1] < 0.1 and (pans[-1][3] - pans[-1][2]) * d > 0: pans[-1] = (pans[-1][0], b, pans[-1][2], x1)
+            else: pans.append((a, b, cam, x1))
+            cam = x1; k = j + 1
+            while k < len(us) and us[k] < b: k += 1
+        return pans
+
+    def x(self, u):
+        """window left edge at source-elapsed u (the same maths as expr())"""
+        x = self.keys[0][1]
+        for a, b, x0, x1 in self.pans:
+            if u < a: return x
+            if u < b: return x0 + (x1 - x0) * minjerk((u - a) / (b - a))
+            x = x1
+        return x
+
+    def expr(self):
+        e = "%.1f" % (self.pans[-1][3] if self.pans else self.keys[0][1])
+        for i in range(len(self.pans) - 1, -1, -1):
+            a, b, x0, x1 = self.pans[i]; prev = self.pans[i - 1][3] if i else self.keys[0][1]
+            u = "((t-%.3f)/%.3f)" % (a, b - a)
+            e = "if(lt(t,%.3f),%.1f,if(lt(t,%.3f),%.1f+%.1f*%s*%s*%s*(10-15*%s+6*%s*%s),%s))" % (a, prev, b, x0, x1 - x0, u, u, u, u, u, u, e)
+        return "crop=%d:%d:x='%s':y=%d" % (self.w, self.h, e, self.y)
+
+    def describe(self):
+        if self.note: return self.note
+        return "reframe %s: %dx%d window, %s" % (self.c["reframe"], self.w, self.h, ", ".join(
+            "pan %.2f-%.2fs x %d->%d" % (a, b, x0, x1) for a, b, x0, x1 in self.pans) or "hold x %d" % self.keys[0][1])
+
+_REFRAMES = {}
+def reframe_of(c, s, base, src_path, box, W, H):
+    k = json.dumps([c, s.get("type"), s.get("ss"), s.get("at"), s.get("t"), src_path, box, W, H], sort_keys=True)
+    if k not in _REFRAMES:
+        wh = probe_wh(src_path); _REFRAMES[k] = Reframe(c, s, base, wh, box or [wh[0], wh[1], 0, 0], W, H)
+        print("  " + _REFRAMES[k].describe())
+    return _REFRAMES[k]
 
 class R:
     def __init__(self, spec_path, force=False, verbose=False):
@@ -84,10 +203,17 @@ class R:
         f = s.get("fill", self.spec.get("fill"))
         return f if isinstance(f, dict) else None
 
+    def seg_crop(self, s, c, t, f=None):
+        """crop() plus the reframe form, which needs the segment (times, source) and the fill box."""
+        if isinstance(c, dict) and c.get("reframe"):
+            rf = reframe_of(c, s, self.dir, self.src(s["src"]), f["box"] if f else None, self.W, self.H)
+            return (c["pre"] + "," if c.get("pre") else "") + rf.expr()
+        return self.crop(c, t)
+
     def vf(self, s, t=None, allow_fill=True):
         f = self.fill_of(s) if allow_fill else None
         extra = ("," + s["vf"] if s.get("vf") else "")
-        if not f: return self.crop(s.get("crop"), t) + extra
+        if not f: return self.seg_crop(s, s.get("crop"), t) + extra
         # Letterboxed / landscape source: blurred, darkened copy of the picture box fills the 9:16 frame and the
         # foreground (the segment's crop, default the whole box) is scaled to the full width and centred on cy.
         # Blurring at 1/8 size and scaling up is ~20x cheaper than boxblur at 1080x1920 and looks the same.
@@ -97,7 +223,7 @@ class R:
                 "eq=brightness=%.3f:saturation=1.1,scale=%d:%d,setsar=1[fbg];[fb]%s%s,scale=%d:-2,setsar=1[ffg];"
                 "[fbg][ffg]overlay=(main_w-overlay_w)/2:%d-overlay_h/2" % (
                     bw, bh, bx, by, self.W // 8, self.H // 8, self.W // 8, self.H // 8, blur, -dark, self.W, self.H,
-                    self.crop(fg, t), extra, self.W, int(cy * self.H)))
+                    self.seg_crop(s, fg, t, f), extra, self.W, int(cy * self.H)))
 
     def post(self, s):
         """Effects on the finished 1080x1920 frame, timed in output seconds of the segment: zoom (push-in or punch),
@@ -110,8 +236,10 @@ class R:
             p = r"clip((t-%s)/%s\,0\,1)" % (at, d)
             if z.get("ease", "out") == "out": p = "(1-(1-%s)*(1-%s))" % (p, p)
             zz = "(%s+%s*%s)" % (z0, z1 - z0, p)
-            out += (",scale=w='trunc(%d*%s/2)*2':h='trunc(%d*%s/2)*2':eval=frame,crop=%d:%d:x='(iw-%d)*%s':y='(ih-%d)*%s',setsar=1"
-                    % (W, zz, H, zz, W, H, W, z.get("cx", 0.5), H, z.get("cy", 0.5)))
+            # crop keeps iw/ih from the first frame when scale changes size per frame, so (iw-W)*cx stayed 0 and every
+            # zoom anchored top-left; the offset is computed from the zoom factor instead
+            out += (",scale=w='trunc(%d*%s/2)*2':h='trunc(%d*%s/2)*2':eval=frame,crop=%d:%d:x='%d*(%s-1)*%s':y='%d*(%s-1)*%s',setsar=1"
+                    % (W, zz, H, zz, W, H, W, zz, z.get("cx", 0.5), H, zz, z.get("cy", 0.5)))
         sh = s.get("shake")
         if sh:
             if not isinstance(sh, dict): sh = {"dur": sh}
@@ -179,6 +307,7 @@ class R:
         t_in = t + (1.0 / self.fps if speed else 0)
         args = ["-ss", str(s["ss"]), "-t", "%.3f" % t_in, "-i", self.src(s["src"])]
         if s.get("mute") or speed or not self.has_audio(s["src"]): args += [*self.sil(dur), "-map", "0:v", "-map", "1:a"]
+        elif s.get("af"): args += ["-af", s["af"]]  # per-segment audio filter on the clip's own sound (e.g. a voice echo)
         tail = [] if speed else ["-t", "%.3f" % dur]
         self.run([*args, "-vf", vfilt, *self.V, "-frames:v", self.nf(dur), *self.A, *tail, out]); return dur
 
@@ -247,6 +376,24 @@ class R:
                   "-vf", self.vf(s, s["t"]) + self.fit() + ",minterpolate=fps=%d:mi_mode=mci:mc_mode=aobmc:vsbmc=1,setpts=%s*PTS" % (self.fps * f, f) + self.post(s),
                   *self.V, "-frames:v", self.nf(dur), *self.A, out]); return dur
 
+    def ramp_expr(self, s):
+        """setpts expression: output seconds for source-elapsed T (speclib.ramp_out written as ffmpeg if())."""
+        f, hold, ease, a = ramp_params(s); b = a + ease; c = b + hold; d = c + ease
+        ob = a + ease * (1 + f) / 2; oc = ob + hold * f; od = oc + ease * (f + 1) / 2; q = (f - 1) / (2 * ease)
+        return ("if(lte(T,{a}),T,if(lte(T,{b}),{a}+(T-{a})+{q}*(T-{a})*(T-{a}),if(lte(T,{c}),{ob}+(T-{b})*{f},"
+                "if(lte(T,{d}),{oc}+{f}*(T-{c})-{q}*(T-{c})*(T-{c}),{od}+(T-{d})))))").format(
+            a="%.4f" % a, b="%.4f" % b, c="%.4f" % c, d="%.4f" % d, ob="%.4f" % ob, oc="%.4f" % oc, od="%.4f" % od, q="%.5f" % q, f="%g" % f)
+
+    def seg_ramp(self, s, out):
+        """Real speed, eased into `factor`x slow-mo for `hold` source s around `slow_at`, eased back out. Interpolated to
+        fps x factor once (so the slow part has real frames), then re-timed by the ramp curve and resampled to fps."""
+        f = s.get("factor", 3); dur = self.expected(s)
+        if s["t"] > 1.6: print("note: ramp %r reads %.2f s of source; minterpolate is slow, keep ramps to about 1.5 s" % (s.get("label", ""), s["t"]))
+        self.run(["-ss", str(s["ss"]), "-t", "%.3f" % (s["t"] + 2.0 / self.fps), "-i", self.src(s["src"]), *self.sil(dur), "-map", "0:v", "-map", "1:a",
+                  "-vf", self.vf(s, s["t"]) + self.fit() + ",minterpolate=fps=%d:mi_mode=mci:mc_mode=aobmc:vsbmc=1,setpts='(%s)/TB',fps=%d"
+                  % (self.fps * f, self.ramp_expr(s), self.fps) + self.post(s),
+                  *self.V, "-frames:v", self.nf(dur), *self.A, out]); return dur
+
     def raw_dur(self, s):
         k = s["type"]
         if k in ("clip",): return s["t"] * (s.get("speed") or 1)
@@ -254,21 +401,51 @@ class R:
         if k == "reverse": return s["t"] * s.get("slow", 1.25)
         if k == "boomerang": return s["t"] * 2 * s.get("loops", 2)
         if k == "slowmo": return s["t"] * s.get("factor", 3)
+        if k == "ramp": return ramp_total(s)
         sys.exit("unknown segment type %r" % k)
     # The one duration every segment builder AND the timeline use, so captions can never drift off cuts.
     def expected(self, s): return self.snap(self.raw_dur(s))
 
-    # ---------- sound effects, all synthesised (no sample files to license)
+    # ---------- sound effects: a CC0 sample from <shorts>/sfx/<kind>/ when there is one, else synthesised
+    SAMPLE_KIND = {"bass": "sub"}  # spec kind -> sample folder; kinds not listed use their own name; ding is always synth
     SFX = {  # kind: (default duration, lavfi source with %(d)s, shaping filters)
+        "impact": (0.5, "aevalsrc='0.9*exp(-14*t)*sin(2*PI*55*t)+0.45*exp(-45*t)*(2*random(0)-1)':d=%(d)s:s=48000", "lowpass=f=5000,"),
+        "sub":   (0.9, "aevalsrc='0.95*exp(-3.2*t)*sin(2*PI*(72*t-18*t*t/%(d)s))':d=%(d)s:s=48000", "afade=t=out:st=%(e)s:d=0.06,"),
+        "tape-stop": (0.6, "aevalsrc='0.45*(1-t/%(d)s)*sin(2*PI*(320*t-160*t*t/%(d)s))':d=%(d)s:s=48000", "lowpass=f=3000,"),
         "bass":  (0.6, "sine=f=%(freq)s:d=%(d)s", "afade=t=out:st=0.05:d=0.5,"),
         "whoosh": (0.45, "anoisesrc=d=%(d)s:c=pink:a=0.7:r=48000", "highpass=f=500,lowpass=f=6000,afade=t=in:d=%(a)s:curve=exp,afade=t=out:st=%(a)s:d=%(b)s,"),
         "riser": (1.2, "aevalsrc='0.45*(t/%(d)s)*sin(2*PI*(150*t+900*t*t/%(d)s))':d=%(d)s:s=48000", "afade=t=out:st=%(e)s:d=0.06,"),
         "ding":  (0.8, "aevalsrc='0.5*exp(-5*t)*(sin(2*PI*1568*t)+0.4*sin(2*PI*3136*t))':d=%(d)s:s=48000", ""),
         "tick":  (0.08, "aevalsrc='0.7*exp(-70*t)*sin(2*PI*2200*t)':d=%(d)s:s=48000", ""),
     }
+    def sfx_dir(self): return os.environ.get("FS_SFX_DIR") or os.path.join(os.path.dirname(self.dir), "sfx")
+    def sample(self, h):
+        """(input args, shaping) for a sample hit, or None. `sample` picks a file (path under the sfx dir or the edit);
+        otherwise a stable pick from <sfx>/<kind>/ by hit time. Peak-normalised to -3 dBFS once and cached in build/,
+        so packs with different levels sit alike; `volume` then works the same for samples and synth."""
+        kind = h.get("kind", "bass")
+        if kind in ("ding", "file"): return None
+        if h.get("sample"):
+            f = h["sample"]; f = next((p for p in (f, os.path.join(self.sfx_dir(), f), os.path.join(self.dir, f)) if os.path.isfile(p)), None)
+            if not f: sys.exit("hit sample %r not found (looked in %s and the edit folder)" % (h["sample"], self.sfx_dir()))
+        else:
+            d = os.path.join(self.sfx_dir(), self.SAMPLE_KIND.get(kind, kind))
+            fs = sorted(x for x in os.listdir(d) if x.lower().endswith((".wav", ".ogg", ".mp3", ".flac"))) if os.path.isdir(d) else []
+            if not fs: return None
+            f = os.path.join(d, fs[int(hashlib.sha1(("%s%.3f" % (kind, h["at"])).encode()).hexdigest(), 16) % len(fs)])
+        norm = os.path.join(self.B, "sfx_%s.wav" % hashlib.sha1((f + str(os.path.getmtime(f))).encode()).hexdigest()[:8])
+        if not os.path.exists(norm):
+            vd = subprocess.run(["ffmpeg", "-v", "info", "-i", f, "-af", "volumedetect", "-f", "null", "-"], capture_output=True, text=True).stderr
+            import re; m = re.search(r"max_volume: ([-\d.]+)", vd); g = -3 - float(m.group(1)) if m else 0
+            self.run(["-i", f, "-af", "volume=%.2fdB" % g, "-ar", "48000", "-ac", "2", norm])
+        shape = ("atrim=0:%s,afade=t=out:st=%.3f:d=0.05," % (h["dur"], max(h["dur"] - 0.05, 0))) if h.get("dur") else ""
+        return ["-i", norm], shape
+
     def sfx(self, h):
         kind = h.get("kind", "bass")
-        if kind not in self.SFX: sys.exit("unknown hit kind %r (have: %s)" % (kind, ", ".join(self.SFX)))
+        if kind not in self.SFX: sys.exit("unknown hit kind %r (have: %s, file)" % (kind, ", ".join(self.SFX)))
+        if kind not in ("bass", "ding") and not getattr(self, "_warned_" + kind, False):
+            print("note: no sample for %s in %s, synth used" % (kind, self.sfx_dir())); setattr(self, "_warned_" + kind, True)
         d0, src, shape = self.SFX[kind]; d = h.get("dur", d0)
         v = {"d": d, "freq": h.get("freq", 48), "a": round(d * 0.65, 3), "b": round(d * 0.35, 3), "e": round(max(d - 0.06, 0), 3)}
         return src % v, shape % v
@@ -293,7 +470,7 @@ class R:
         print("total %.2fs" % total)
         if total > self.spec.get("max_duration", 35): print("WARNING: over %ss; the channel rule is 13-30 s" % self.spec.get("max_duration", 35))
         for o in self.spec.get("overlays", []):
-            if o["to"] > total + 0.01: print("WARNING: overlay %s ends at %s, after the video (%.2f)" % (o.get("big") or o.get("small") or o.get("png"), o["to"], total))
+            if o["to"] > total + 0.01: print("WARNING: overlay %s ends at %s, after the video (%.2f)" % (o.get("big") or o.get("small") or o.get("png") or o.get("video"), o["to"], total))
         ver = self.spec.get("version", 1); slug = self.spec.get("slug", "short")
         out = os.path.join(self.dir, self.spec.get("out") or "%s_v%s.mp4" % (slug, ver))
         json.dump({"total": total, "segments": rows, "out": out}, open(os.path.join(self.B, "timeline_v%s.json" % ver), "w"), indent=1)
@@ -302,6 +479,7 @@ class R:
         for i, s in enumerate(self.spec["segments"]):
             files = [self.sources.get(s.get("src"))] + [self.sources.get(s.get(k, {}).get("src")) for k in ("top", "bottom")]
             if s.get("image"): files.append(os.path.join(self.dir, s["image"]))
+            if isinstance(s.get("crop"), dict) and s["crop"].get("reframe"): files.append(os.path.join(self.dir, s["crop"]["reframe"]))
             p = os.path.join(self.B, "seg_%02d_%s.mp4" % (i, self.h(s, *files)))
             if not os.path.exists(p) or self.force:
                 print("encoding %d %s %s" % (i, s["type"], s.get("label", ""))); getattr(self, "seg_" + s["type"])(s, p)
@@ -317,9 +495,13 @@ class R:
         # overlays + audio in one pass
         inputs = ["-i", raw]; fc = ""; last = "[0:v]"; n = 1
         for i, o in enumerate(self.spec.get("overlays", [])):
-            png = self.overlay_png(o, i)
-            inputs += ["-loop", "1", "-framerate", str(self.fps), "-t", "%.3f" % total, "-i", png]
-            fc += "%s[%d:v]overlay=%d:%d:eof_action=pass:enable='between(t,%s,%s)'[v%d];" % (last, n, o.get("x", 0), o.get("y", 0), o["from"], o["to"], i)
+            if o.get("video"):  # moving RGBA overlay (track.py render), timed from output 0
+                inputs += ["-i", os.path.join(self.dir, o["video"])]
+                fc += "%s[%d:v]overlay=%d:%d:format=auto:eof_action=pass:enable='between(t,%s,%s)'[v%d];" % (last, n, o.get("x", 0), o.get("y", 0), o["from"], o["to"], i)
+            else:
+                png = self.overlay_png(o, i)
+                inputs += ["-loop", "1", "-framerate", str(self.fps), "-t", "%.3f" % total, "-i", png]
+                fc += "%s[%d:v]overlay=%d:%d:eof_action=pass:enable='between(t,%s,%s)'[v%d];" % (last, n, o.get("x", 0), o.get("y", 0), o["from"], o["to"], i)
             last = "[v%d]" % i; n += 1
         au = self.spec.get("audio", {}); mix = ["[a0]"]
         fc += "[0:a]volume=%s[a0];" % au.get("clip_volume", 0.9)
@@ -330,8 +512,12 @@ class R:
             fo = bed.get("fade_out", 2.0)
             fc += "[%d:a]volume=%s,afade=t=out:st=%.3f:d=%.3f[a%d];" % (n, bed.get("volume", 0.22), max(total - fo, 0), fo, n); mix.append("[a%d]" % n); n += 1
         for hkey in au.get("hits", []):
-            src, shape = self.sfx(hkey)
-            inputs += ["-f", "lavfi", "-i", src]
+            if hkey.get("kind") == "file":  # a prepared sound (e.g. an echo tail rendered from a quote) mixed like a synthesised hit
+                inputs += ["-i", os.path.join(self.dir, hkey["file"])]; shape = ""
+            elif self.sample(hkey):
+                args, shape = self.sample(hkey); inputs += args
+            else:
+                src, shape = self.sfx(hkey); inputs += ["-f", "lavfi", "-i", src]
             ms = int(max(hkey["at"], 0) * 1000)
             fc += "[%d:a]%sadelay=%d|%d,volume=%s[a%d];" % (n, shape, ms, ms, hkey.get("volume", 0.9), n); mix.append("[a%d]" % n); n += 1
         ln = au.get("loudnorm", "I=-14:TP=-1.5:LRA=11")

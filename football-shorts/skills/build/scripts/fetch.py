@@ -11,6 +11,8 @@ removes. The flag records that the user made that call for this source.
 --rights is the origin class the researcher assigned: broadcaster | club | player |
 fan | creator | own | unknown. It is copied into sources.json so the hand-off can
 state the risk per clip. --section a-b downloads only that time range (seconds).
+Both modes end with a QUALITY line (`ok`, or `LOW` when the short side is under 540 px): on LOW, tell the
+user before building.
 """
 import argparse, datetime as dt, json, os, re, shutil, subprocess, sys
 
@@ -27,6 +29,16 @@ def info(url):
             "views": d.get("view_count"), "likes": d.get("like_count"), "duration_s": d.get("duration"),
             "width": d.get("width"), "height": d.get("height"), "fps": d.get("fps")}
 
+def quality(w, h, fps, what="source"):
+    """One line the build reads before anything is rendered: a short side under 540 px upscales soft on a 1080-wide Short."""
+    try: n, _, d = str(fps).partition("/"); fps = float(n) / float(d or 1)
+    except (TypeError, ValueError, ZeroDivisionError): fps = None
+    fs = " %.4gfps" % fps if fps else ""
+    if not w or not h: return "QUALITY: unknown size%s; probe it after download" % fs
+    if min(w, h) < 540:
+        return "QUALITY: %dx%d%s LOW - %s short side %d < 540, expect soft upscales; tell the user before building" % (w, h, fs, what, min(w, h))
+    return "QUALITY: %dx%d%s ok" % (w, h, fs)
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("edit_dir"); ap.add_argument("url")
@@ -38,7 +50,7 @@ def main():
     if not shutil.which("yt-dlp"): sys.exit("yt-dlp not installed (brew install yt-dlp)")
     meta = info(a.url)
     if a.info:
-        print(json.dumps(meta, indent=1, ensure_ascii=False)); return
+        print(json.dumps(meta, indent=1, ensure_ascii=False)); print(quality(meta["width"], meta["height"], meta["fps"])); return
     if not a.accept_terms:
         sys.exit("Refusing to download without --accept-terms. Tell the user: this breaks YouTube ToS; "
                  "%s footage = Content ID risk that cropping/speed/music/short excerpts do not remove. "
@@ -64,6 +76,7 @@ def main():
     json.dump(lst, open(man, "w"), indent=1, ensure_ascii=False)
     print("saved %s  (%sx%s %s, %ss)  rights=%s  -> sources.json" % (
         meta["file"], st.get("width"), st.get("height"), st.get("r_frame_rate"), meta["local"]["duration_s"], a.rights))
+    print(quality(st.get("width"), st.get("height"), st.get("r_frame_rate")))
 
 if __name__ == "__main__":
     main()

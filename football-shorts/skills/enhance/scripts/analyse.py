@@ -7,6 +7,7 @@ Prints and writes <out>/analysis.json:
   - format: size, fps, duration, whether there is an audio track at all
   - picture box: letterbox / pillarbox bars found by cropdetect (a 16:9 broadcast inside a
     vertical upload is common), with the crop to use as `fill.box` in the spec
+  - QUALITY line: `ok`, or `LOW` when the picture box's short side is under 540 px (tell the user first)
   - shots: hard cuts found by scene score inside the picture box (bars dilute the score, so the
     box is cropped first), each shot's length and mean motion
   - motion curve per --step seconds; long low-motion stretches are flagged as trim candidates
@@ -19,6 +20,7 @@ Needs ffmpeg + Pillow (the build skill's setup.sh venv).
 import argparse, json, os, re, statistics, subprocess, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "build", "scripts"))
 from sheets import probe, frames_at, tile, label
+from fetch import quality
 
 def ff(args):
     return subprocess.run(["ffmpeg", "-hide_banner", "-nostats", *args], capture_output=True, text=True).stderr
@@ -104,7 +106,7 @@ def main():
     print("%s\n  %dx%d @ %.3f fps, %.2f s, audio: %s" % (a.video, W, H, fps, dur, "yes" if audio else "NONE (every sound must come from the edit)"))
     if boxed:
         print("  picture box %dx%d at x=%d y=%d (bars around it): use \"fill\": {\"box\": %s} so the output is not mostly black" % (*box, json.dumps(box)))
-    if min(box[0], box[1]) < 540: print("  low resolution picture (%dx%d): punch-ins above ~1.3x will look soft" % (box[0], box[1]))
+    print("  " + quality(box[0], box[1], fps, "picture box" if boxed else "source"))
     print("  %-4s %-7s %-7s %-6s %s" % ("shot", "from", "to", "dur", "motion"))
     for s in shots: print("  %-4d %-7.2f %-7.2f %-6.2f %.3f" % (s["shot"], s["from"], s["to"], s["dur"], s["motion"]))
     if slow: print("  low-motion stretches (trim candidates): " + ", ".join("%.2f-%.2f" % tuple(r) for r in slow))

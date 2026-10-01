@@ -18,7 +18,8 @@ unchanged.
 | Edit folder | `${CLAUDE_PROJECT_DIR}/shorts/<slug>/` (`FOOTBALL_SHORTS_DIR` overrides `shorts/`) |
 | Inside it | `spec.vN.json` · `build/analysis.json` · `build/sheets/` · `<slug>_vN.mp4` · `notes.md` |
 | Analyse | `${CLAUDE_PLUGIN_ROOT}/skills/enhance/scripts/analyse.py` |
-| Render, sheets, check | `${CLAUDE_PLUGIN_ROOT}/skills/build/scripts/{setup.sh,render.py,sheets.py,check.py}` |
+| Render, sheets, check, cost | `${CLAUDE_PLUGIN_ROOT}/skills/build/scripts/{setup.sh,render.py,sheets.py,check.py,cost.py}` |
+| Frame reader | subagent `football-shorts:spotter` (`agents/spotter.md`, `model: sonnet`) |
 | Python | `PY=<shorts dir>/.venv/bin/python` from `setup.sh` |
 | References | `references/hook-playbook.md` (this skill) · `../build/references/spec-format.md` · `../build/references/channel-style.md` |
 
@@ -31,19 +32,37 @@ unchanged.
 | `length:` | follows the content: every key moment kept complete, only the gaps between them trimmed; usually close to the original. Over 30 s: say so and offer a shorter cut, do not decide alone |
 | `hook:` | ask (three options, step 3) unless the user named one |
 | What the video is about (match, player, date) | from the user's message; never invented |
+| `beats:` the user's own beat list, e.g. `0-2 run-up · 2-6 miss 1 · 6-9 replay of miss 1 · 9-12 miss 2 · 12-14 crowd` | none: the spotter maps the video (step 2). When given, step 2 takes the fast path: far fewer frames, no spotter call, and the user's count and grouping are final |
 
 ## Procedure
 
-1. **Set up and look.** `bash setup.sh`, create `shorts/<slug>/`, reference the video by absolute path in the spec `sources` (do not copy or modify the user's file). Run `$PY analyse.py <video> --out shorts/<slug>/build` and read what it prints: audio or none, the picture box (letterbox), shots with motion, low-motion stretches, loud peaks. Read the shot sheet it writes.
-2. **Map the beats.** For every shot, including the low-motion ones, `sheets.py fine <video> --from a --to b --fps 4 --crop <box as w:h:x:y>` and read the frames (10 fps around a shot to find the frame the ball leaves the foot). Write a beat table in `notes.md`: source seconds, what happens, who is where in the box (x range for the crop). Then:
+1. **Set up and look.** `bash setup.sh`, create `shorts/<slug>/`, reference the video by absolute path in the spec `sources` (do not copy or modify the user's file). Run `$PY analyse.py <video> --out shorts/<slug>/build` and read what it prints: audio or none, the picture box (letterbox), the `QUALITY:` line, shots with motion, low-motion stretches, loud peaks. Read the shot sheet it writes. If QUALITY says `LOW`, tell the user in one line (picture box size, that it will look soft, a better source if they have one) and wait for a go before rendering; a `{"reframe": ...}` crop (spec-format.md) enlarges the pitch strip of a small picture box.
+2. **Map the beats.**
+
+   **Fast path, when the user gave `beats:`.** Their list is the beat table: count, grouping (which clip is a replay of which moment) and dead stretches are theirs and are not re-derived. Only three things still need frames, all read by you (no spotter):
+   - **Snap the boundaries.** The user's times are approximate (±0.5 s). Match each boundary to the nearest cut in `analysis.json`; where there is none within 0.5 s, keep the user's time.
+   - **Strike and outcome of each key moment.** One `sheets.py fine <video> --from a --to b --fps 10 --width 240 --crop <box>` per key moment, over the ~1.5 s where the strike and outcome should be (not the whole beat). Note the frame the ball leaves the foot and the first frame the outcome is visible. Replays: only when the replay will get its own slow-mo.
+   - **Crops.** One `sheets.py frames <video> --at <one time per beat> --crop <box>` for the whole video; read x ranges off the grid.
+   If a frame contradicts the list (the "miss" is a goal, a beat shows a different chance, a boundary is off by more than a second), do not silently fix it: note it and raise it in step 3. Write the table into `notes.md` with the user's wording kept, the snapped seconds, strike/outcome frames and x ranges. Then go to step 3.
+
+   **Full mapping (delegated), when there is no `beats:` list.** Looking at every shot frame by frame is the most image-heavy step in the plugin, so the `football-shorts:spotter` subagent does it and only its table comes back. Call the Agent tool with `subagent_type: football-shorts:spotter`, `run_in_background: false`, and:
+
+   ```
+   Mode: beats. PY=<venv python>  sheets.py: <abs path>/skills/build/scripts/sheets.py
+   Edit folder: <abs shorts/<slug>>
+   Video: <abs path>  analysis: <abs>/build/analysis.json  box: <w:h:x:y or none>
+   What it is (from the user): <match, player, what the moments are, the user's count if given>
+   ```
+
+   Read its verification sheet (the decisive frame of each key moment) and check the grouping against the definitions below; for any row marked unsure or that looks wrong, `sheets.py fine --from --to --fps 10 --crop <box>` that stretch yourself. Copy the corrected beat table into `notes.md`: source seconds, what happens, who is where in the box (x range for the crop). If the Agent tool is unavailable, map it inline: per shot `sheets.py fine --fps 2 --width 240 --crop <box>`, 10 fps only across the strike. Definitions:
    - **Key moments** are what the user made the video for (misses, goals, saves, skills). Count them, and for each note where the shot is and where the outcome is visible (ball past the post, keeper holding it).
    - **Count events, not clips.** A moment is usually shown live, then as an aftermath close-up, then as a slow-mo replay from another angle: that is one moment. Match clips by who is where (same keeper, same post, same shirt numbers, same end position) before calling anything a new chance; when unsure, ask.
    - **Replays belong to their moment**, and are often its only clear view.
    - **Dead stretches** are only what shows no key moment: crowd pans, walking back, graphics.
    - **The payoff** is the most striking frame (often an aftermath or reaction, not the last shot).
    - Analysis numbers are hints: low motion can be a wide replay of the best moment and a soft cut inside a pan can be missed. Decide from the frames, never from the numbers.
-3. **Confirm the beats and offer three hooks, then stop.** First the beat list in a few lines: "I count N <misses>: #1 a–b s, #2 …; c–d s is the replay of #k; I will cut <x> (why); planned length ~L s", so the user can correct the count and the grouping before anything is rendered. The user filmed or picked these moments and knows them; their count wins. Then pick the three strongest from `references/hook-playbook.md` for this video (flash-forward, counter, stakes line, question-free challenge, reaction first, etc.), each as one line: what the first 1.5 s shows and says. Recommend one. Wait for the user's pick unless they already said "just do it" or named a hook.
-4. **Write `spec.v1.json`.** Same order of events as the original unless the hook moves the payoff to the front. Rules:
+3. **Confirm the beats and offer three hooks, then stop.** First the beat list in a few lines: "I count N <misses>: #1 a–b s, #2 …; c–d s is the replay of #k; I will cut <x> (why); planned length ~L s", so the user can correct the count and the grouping before anything is rendered. The user filmed or picked these moments and knows them; their count wins. With a `beats:` list, don't present a count of your own: repeat their list in one line with the snapped times ("your 5 beats, snapped to cuts at 2.08 / 5.92 / …; cutting 12–14 crowd"), plus any frame that contradicted it as a question. A contradiction always stops here, even after "just do it". Then pick the three strongest from `references/hook-playbook.md` for this video (flash-forward, counter, stakes line, question-free challenge, reaction first, etc.), each as one line: what the first 1.5 s shows and says. Recommend one. Wait for the user's pick unless they already said "just do it" or named a hook.
+4. **Write `plan.v1.md`, run `plan.py`.** Beats, captions and hits go into a plan (grammar: `../build/references/plan-format.md`, header needs `spine`), and `$PY ../build/scripts/plan.py <edit_dir>/plan.v1.md` writes `spec.v1.json` and prints the timeline; do not hand-write spec JSON. Same order of events as the original unless the hook moves the payoff to the front. Rules:
    - Letterboxed or landscape source → spec-level `"fill": {"box": [...]}` from the analysis; per segment `crop` inside the box picks the foreground window (full box width for wide shots, ~300 px wide on a 478 px box for faces). Never hand over a render that is mostly bars.
    - Open on motion at 0 s with the hook text on frame 1. No flash, fade or title card on the first segment (render.py ignores `flash` there: frame 0 is the scroll thumbnail).
    - Every key moment stays in, complete: build (0.6–1.6 s real speed) → the decisive 0.7–0.8 s in `slowmo` factor 2 with a `zoom` push-in → the outcome at real speed (ball wide, save, players down) → only then the counter or verdict badge with a `bass` + `ding` hit. Never cut a moment before its outcome is on screen. The slow-mo is on the shot itself (find the frame the ball leaves the foot), not on the aftermath. A counter badge shows from the outcome until the next moment's build starts, then clears, so an old number is never on screen during a new chance. A replay of a moment follows it with a "SLOW-MO REPLAY" / "ANOTHER ANGLE" badge and never gets a new number; a source that is already slow-mo plays at its own speed.
@@ -53,11 +72,11 @@ unchanged.
    - A `whoosh` 0.3 s before each hard cut into a new chance, a `riser` into the final beat, `bass` on freezes and reveals. Silent source → these hits are the whole soundtrack; say that the user should add a sound at upload (Shorts "Add sound") or pass `bed.file`.
    - Captions: a persistent context line at the top (`y_big` 270), badges for counters and verdicts just under the picture (`extra` with `bg`, `emoji` inline), at most six words each, inside the safe zones. Only claims the user or the footage supports: no scores, dates or stats you have not verified.
    - Last beat cuts back into the opening (same moment or same framing) so it loops.
-   `render.py spec.v1.json --dry-run`, copy overlay and hit times from the timeline.
-5. **Render and score.** `$PY render.py spec.v1.json`, then `$PY check.py <slug>_v1.mp4 --timeline build/timeline_v1.json --spec spec.v1.json` and Read the sheet. Fix any FAIL in the retention block, black or mostly-bar frames, cropped faces, emoji colliding with text, captions over the subject. At most two internal passes (each a new version), then hand over.
-6. **Hand over.** `open <mp4>`. In chat: path, length vs original, the beat table (output time · source time · beat · effect), captions in order, the hook chosen and why, what was cut from the original, sound situation, rights (below), what was not verified. End with: send changes as numbered points and run `/football-shorts:revise`.
+   `plan.py` snaps lengths to frames and places captions and hits from the computed beat starts; read its printed timeline and warnings.
+5. **Render and score.** `$PY render.py spec.v1.json`, then `$PY check.py <slug>_v1.mp4 --timeline build/timeline_v1.json --spec spec.v1.json` and Read the sheet. Fix any FAIL in the retention block, black or mostly-bar frames (`verdict` line), cropped faces, emoji colliding with text, captions over the subject. At most one internal pass (a new version; compare it with `sheets.py compare <new> --ref <old> --at <changed seconds>` rather than a whole new sheet when only captions, timing or sound moved), then hand over.
+6. **Hand over.** Write the step 8 record first (revise may run in a fresh session that has only the files), then run `python3 ${CLAUDE_PLUGIN_ROOT}/skills/build/scripts/cost.py --step enhance --slug <slug>` from the project root. `open <mp4>`. In chat: path, length vs original, the beat table (output time · source time · beat · effect), captions in order, the hook chosen and why, what was cut from the original, sound situation, rights (below), what was not verified, the cost lines. End with: send changes as numbered points; for a cheaper revision start a new session and paste `/football-shorts:revise slug: <slug>` followed by the list, or reply here to continue.
 7. **Upload kit (when asked, or offer it).** Title, description, hashtags, pinned comment and a sound: use `/yt-insights:metadata` when that plugin is installed (channel voice from its top performers), otherwise `../build/references/channel-style.md`. For sound, name tracks to pick from the Shorts "Add sound" library at upload (licensed there for Shorts) and say where the drop should land on the edit's timeline; never download or mux commercial music into the file.
-8. **Record.** `notes.md`: source file, analysis summary, beat table (with moment grouping), hook options offered and the pick, version log with the user's corrections verbatim.
+8. **Record.** `notes.md` with a `## State` block on top (≤20 lines: latest version, source with rights and QUALITY line, standing decisions, open questions) and an `## Appendix`: source file, analysis summary, the user's `beats:` list verbatim if given, beat table (with moment grouping), hook options offered and the pick, version log with the user's corrections verbatim.
 
 ## Hard rules
 

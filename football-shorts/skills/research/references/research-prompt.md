@@ -2,7 +2,9 @@
 
 This is the brief the researcher role was built from, kept word for word so the
 output format stays stable. The SKILL.md procedure tells you how to satisfy each
-section with the tools in this environment; this file is the contract.
+section with the tools in this environment; this file is the contract. One deliberate
+deviation: to save cost, only the top three ideas get every field below; ideas 4 and
+beyond are one-liners, and the build skill designs one fully if the user picks it.
 
 ---
 

@@ -1,6 +1,6 @@
 {
   "name": "football-shorts",
-  "version": "1.2.0",
+  "version": "1.4.0",
   "description": "Find this week's viral football moments with verified sources, turn one into a 9:16 YouTube Short with ffmpeg + Pillow from one or many source files, re-edit a video you already have with hooks, counters, slow-mo and sound effects, and revise any of them from numbered feedback.",
   "author": {
     "name": "adroit28"

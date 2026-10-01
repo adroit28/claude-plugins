@@ -15,6 +15,16 @@ title, text changes every 1.5–2.5 s.
 | **Verdict challenge** | The moment frozen just before contact with "GOAL OR NOT?" style badge | a close call, VAR, a shot that hits the post | `still` at the instant before, then play out; not for the title (no questions there) |
 | **Before/after split** | Two halves: the chance and the reaction, or two similar moments | contrasts, repeats, "same player, same spot" | `split` segment, 1.5–2.5 s |
 
+## Spine before cuts
+
+Decide three things before choosing a single cut, and write them as the plan's `spine` line:
+- **Question** (0 s): the one thing the viewer wants answered, on screen from the first frame ("3 LEGENDS. 1 NAME.").
+- **Turn** (60–70 % in): the beat where it flips: the reveal, the replay that shows what really happened, the
+  number that changes the meaning. Earlier and the rest drags; later and the payoff has no room.
+- **Button** (last beat): the answer, short, ideally cutting back into the opening so the loop reads as one story.
+Every other beat either raises the question or delays the turn; a beat that does neither is cut. check.py
+checks the spine from the spec.
+
 ## Retention craft after the hook
 
 - A change every 1.5–3 s: a cut, a caption change, a zoom or a hit. `check.py --spec` measures the longest stretch without one.

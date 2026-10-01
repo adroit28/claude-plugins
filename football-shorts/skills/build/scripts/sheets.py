@@ -5,6 +5,7 @@
   sheets.py fine   <video> --from 262 --to 272 [--fps 2]          dense sheet of a window
   sheets.py frames <video> --at 263.0 263.5 264.0 [--grid 100]    labelled frames with a pixel grid
   sheets.py compare <out.mp4> --at 3.3 5.0 6.6 ...                same as frames, for a rendered Short
+  sheets.py compare <new.mp4> --ref <old.mp4> --at 7 12            one sheet, old | new side by side per time
   add --crop w:h:x:y to any mode to look only inside a letterboxed clip's picture box
 
 Every frame is stamped with its time in seconds. `frames` also draws a grid every
@@ -12,7 +13,7 @@ Every frame is stamped with its time in seconds. `frames` also draws a grid ever
 (a 9:16 window on 1080p is 608 px wide: crop x = subject centre - 304).
 Needs ffmpeg + Pillow (see setup.sh). Look at the PNGs with the Read tool.
 """
-import argparse, json, math, os, subprocess, sys, tempfile
+import argparse, json, math, os, re, subprocess, sys, tempfile
 try:
     from PIL import Image, ImageDraw, ImageFont
 except ImportError:
@@ -67,6 +68,7 @@ def main():
     ap.add_argument("--at", type=float, nargs="*", default=[]); ap.add_argument("--grid", type=int, default=100)
     ap.add_argument("--out", default=None, help="output dir (default: <video dir>/../build/sheets)")
     ap.add_argument("--width", type=int, default=None, help="thumbnail width px")
+    ap.add_argument("--ref", help="compare only: an earlier render; each time shows old | new side by side")
     ap.add_argument("--crop", help="w:h:x:y picture box to look inside (analyse.py prints it for letterboxed clips); grid x/y stay in source pixels")
     a = ap.parse_args()
     global CROP; CROP = a.crop
@@ -82,6 +84,13 @@ def main():
         if a.t0 is None or a.t1 is None: ap.error("fine needs --from and --to")
         step = 1 / a.fps; times = [round(a.t0 + k * step, 3) for k in range(int((a.t1 - a.t0) / step) + 1)]
         made.append(tile(frames_at(a.video, times, a.width or 320), 6, os.path.join(outdir, "%s_fine_%g-%g.png" % (base, a.t0, a.t1))))
+    elif a.mode == "compare" and a.ref:
+        if not a.at: ap.error("give --at times")
+        old, new = frames_at(a.ref, a.at, a.width or 400), frames_at(a.video, a.at, a.width or 400)
+        rb = os.path.splitext(os.path.basename(a.ref))[0]
+        ver = lambda n: (re.search(r"_(v\d+)$", n) or re.search(r"(.{0,6})$", n)).group(1)
+        pairs = [f for t, o, n in zip(a.at, old, new) for f in (label(o, "old %s %.2fs" % (ver(rb), t)), label(n, "new %s %.2fs" % (ver(base), t)))]
+        made.append(tile(pairs, 4, os.path.join(outdir, "%s_vs_%s_%s.png" % (base, rb, "_".join("%g" % t for t in a.at)[:60]))))
     else:
         if not a.at: ap.error("give --at times")
         grid = a.grid if a.mode == "frames" else None
