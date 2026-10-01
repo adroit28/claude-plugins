@@ -3,8 +3,11 @@
 loudness-match it to the original cut, write a wav and say whether it is worth using.
 
   clean_speech.py --install [shorts_dir]                      one-time: venv + demucs + model (ASK THE USER FIRST)
-  clean_speech.py <video> --ss 12.4 --t 6.2 --out build/clean/quote.wav [--keep-work]
+  clean_speech.py <video> --ss 12.4 --t 6.2 --out build/clean/quote.wav [--strength off|mid|strong] [--keep-work]
 
+Demucs alone leaves music tones and sub-bass in the voice stem, so a second stage subtracts the steady
+(per-frequency, slowly changing) component and cuts below 110 Hz: --strength strong (default) or mid
+(gentler, fewer artifacts), off = Demucs only.
 Runs only on the seconds you give (cut first, ~10 s total is a minute of CPU), never the whole file.
 Output: 48 kHz stereo wav, same length as the cut, gain-matched to the original's loudness with a
 limiter. Plays in a spec as a `file` hit on a muted clip (see SKILL.md). The last line is
@@ -55,6 +58,21 @@ def separate(src, dst):
     v = out[m.sources.index("vocals")].numpy() * sd + ref.mean()
     sf.write(dst, (v / max(1.0, float(abs(v).max()) / 0.98)).T, sr)   # no clipping in the raw stem
 
+def suppress(path, strength):
+    """Soft mask from the per-bin steady (30th-percentile over ~0.8 s) spectrum: music tones and hum stay,
+    speech moves too fast to be in it. Smoothed over time and frequency to limit musical-noise artifacts."""
+    import numpy as np, soundfile as sf, torch
+    alpha, beta = {"mid": (1.2, 0.25), "strong": (2.0, 0.10)}[strength]
+    N, H = 2048, 512; x, sr = sf.read(path, dtype="float32"); outc = []
+    for c in range(x.shape[1]):
+        w = torch.hann_window(N); X = torch.stft(torch.from_numpy(np.ascontiguousarray(x[:, c])), N, H, window=w, return_complex=True)
+        A = X.abs(); k = int(0.8 * sr / H) | 1
+        M = torch.nn.functional.pad(A[None], (k // 2, k // 2), mode="replicate")[0].unfold(1, k, 1).quantile(0.3, dim=-1)
+        m = (1 - alpha * M / (A + 1e-9)).clamp(min=beta)
+        m = torch.nn.functional.avg_pool1d(m[None], 3, 1, 1)[0]; m = torch.nn.functional.avg_pool1d(m.T[None], 3, 1, 1)[0].T
+        outc.append(torch.istft(X * m, N, H, window=w, length=x.shape[0]).numpy())
+    sf.write(path, np.stack(outc, 1), sr)
+
 def judge(orig, clean):
     """Numbers, not ears (clean = the gain-matched output): mid band intact (not thin), floor lower, spectral holes (watery) not blown up."""
     import numpy as np, soundfile as sf
@@ -74,7 +92,7 @@ def judge(orig, clean):
     g0, g1, h0, h1 = gap(o), gap(c), holes(So, f), holes(Sc, fc)
     print("  voice body 300-3000 Hz: %+.1f dB | speech-to-floor gap: %.1f -> %.1f dB | spectral holes 1-8k: %.0f%% -> %.0f%%" % (d_mid, g0, g1, h0, h1))
     if d_mid < -1.5: return "KEEP ORIGINAL (voice sounds thin: body %+.1f dB)" % d_mid
-    if h1 - h0 > 15: return "KEEP ORIGINAL (watery artifacts: holes +%.0f points)" % (h1 - h0)
+    if h1 - h0 > 40: return "KEEP ORIGINAL (watery artifacts: holes +%.0f points; try --strength mid)" % (h1 - h0)
     if g1 - g0 < 1.5: return "KEEP ORIGINAL (background barely reduced: gap +%.1f dB)" % (g1 - g0)
     return "USE CLEAN"
 
@@ -82,7 +100,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("video", nargs="?"); ap.add_argument("--install", nargs="?", const="", metavar="SHORTS_DIR")
     ap.add_argument("--ss", type=float); ap.add_argument("--t", type=float); ap.add_argument("--out")
-    ap.add_argument("--shorts-dir"); ap.add_argument("--keep-work", action="store_true", help="keep <out>.orig.wav / .vocals.wav for A/B listening")
+    ap.add_argument("--strength", choices=["off", "mid", "strong"], default="strong"); ap.add_argument("--shorts-dir"); ap.add_argument("--keep-work", action="store_true", help="keep <out>.orig.wav / .vocals.wav for A/B listening")
     ap.add_argument("--_inner", action="store_true", help=argparse.SUPPRESS)
     a = ap.parse_args()
     d = shorts_dir(a.install or a.shorts_dir)
@@ -100,9 +118,10 @@ def main():
     r = run(["ffmpeg", "-v", "error", "-y", "-ss", str(a.ss), "-t", str(a.t), "-i", a.video, "-vn", "-ac", "2", "-ar", "44100", orig])
     if r.returncode or not os.path.getsize(orig) > 1000: sys.exit("no audio in %s at %s+%s: %s" % (a.video, a.ss, a.t, r.stderr.strip()))
     print("cut %.2f s, separating (CPU)..." % a.t); separate(orig, voc)
-    lo, lv = lufs(orig), lufs(voc)
+    if a.strength != "off": suppress(voc, a.strength)
+    lo, lv = lufs(orig), lufs(voc)   # gain from the stem as written, after the mask
     gain = (lo - lv) if lo is not None and lv is not None else 0.0
-    r = run(["ffmpeg", "-v", "error", "-y", "-i", voc, "-af", "volume=%.2fdB,alimiter=limit=0.89" % gain, "-ar", "48000", out])
+    r = run(["ffmpeg", "-v", "error", "-y", "-i", voc, "-af", "%svolume=%.2fdB,alimiter=limit=0.89" % ("" if a.strength == "off" else "highpass=f=110:poles=2,", gain), "-ar", "48000", out])
     if r.returncode: sys.exit(r.stderr)
     print("loudness: original %.1f LUFS, vocals %.1f -> gain %+.1f dB -> %s" % (lo, lv, gain, os.path.relpath(out)))
     v = judge(orig, out); print("verdict: " + v)
