@@ -18,6 +18,8 @@ Narrated story → storyboard ✋ → assets ✋ (downloads) → scaffold → sc
 | Facts | `<slug>/verify.md` (Images section: Commons candidates) |
 | Output | `storyboard.md`, `src/` (photos + `sources.json`), `anim/`, `build/check/`, `<slug>_v<N>.mp4`, `notes.md` |
 
+`<story>` is the FULL path to `story.v<N>.json` (a file, never the folder). Pass that file to every script.
+
 ## Procedure
 
 1. **Check.** `python3 validate.py <story>` (script stage). Needs `narration.words`; if missing, run narrate first. If `<slug>_v<N>.mp4` exists, use `revise`.
@@ -36,7 +38,9 @@ Narrated story → storyboard ✋ → assets ✋ (downloads) → scaffold → sc
    - Use the kit: `Card`+`NameTag`, `Bubble`, `Stamp`, `Badge`, `Emoji` (`wobble`, `crossAt`), `CountUp`, `Avatar`, `Rings`, `HookProp`, `Title`, `Question`, `Shake`/`Sway`/`Layer`, `Sfx`. Any wrapper with a transform is a `Layer` (absolute, inset 0).
    - Layout: title/badges y 120–560, the picture y 300–1280, captions at y 1330 (the kit draws them). Keep text off faces.
    - `cd anim && npx tsc --noEmit -p .` must pass. Look at tricky moments with `python3 anim.py still <story> --at 3.2 11.5` (Read the PNGs) or `anim.py render <story> --frames 0-120`.
+   - Text props are plain strings: write real line breaks, never a literal `\n`. Keep every tag/badge/overlay out of the caption band (y > 1300) and at least 40 px inside the screen edges. Every Stamp/Badge gets an `until`.
 6. **Render + check.** `python3 anim.py render <story> [--at <times of key moments>]` → `anim/out/raw_v<N>.mp4` → loudnorm −14 LUFS → `<slug>_v<N>.mp4`, `build/scene_v<N>.tsx` snapshot, then the check: 1 fps sheets, `--at` frames, first vs last frame, loudness, loop SSIM. Read every sheet: nothing clipped at the edges, text never on a face, each change on its word, captions legible, the badge clean, loop close (SSIM ~0.88 is normal while the badge covers the end). Fix and re-render before showing the user; the mp4 can't be overwritten, so for an internal re-render of the same version delete only the mp4 you just made (never an earlier version's). At most two internal passes; report what you couldn't fix.
+   In step 6, read the LAST frame sheet specifically for leftover overlays.
 7. **Cost.** `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/cost.py --step "video v<N>" --slug <slug>`.
 8. **Hand over.** `open <mp4>`. Path, duration (narration + 3 s card), a beat table `| s | Line | Visual |`, photo credits (from `src/sources.json`), known limits, cost lines. Write `notes.md` (storyboard, assets, voice, render log, cost) and `NEXT.md` with `/facts-shorts:metadata <story>` (and `/facts-shorts:revise` for numbered feedback); show it.
 
@@ -47,3 +51,4 @@ Narrated story → storyboard ✋ → assets ✋ (downloads) → scaffold → sc
 - Every claim on screen is in the narration and VERIFIED in verify.md; a paraphrase is never shown in quote marks.
 - Versions only go up; never overwrite an earlier story file or mp4.
 - Every video ends with the like & subscribe card, 3 s (`OUTRO_S` in `kit/Outro.tsx`; never below 2.5 s, never removed).
+- Never run `npx remotion` directly; render only with `anim.py render`.

@@ -14,7 +14,7 @@ anim/
   src/timing.ts              word helpers and the Short's length
   src/words.json             narration.words (synced)      src/channel.json   name/tagline/avatar (synced)
   src/Scene.tsx              THE TOPIC: exports BACKGROUND (CSS) and Overlays({t})
-  src/kit/                   anim.ts, overlays.tsx, props.tsx, Outro.tsx
+  src/kit/                   anim.ts, overlays.tsx, props.tsx, Outro.tsx, index.ts (barrel)
   src/examples/hello-phone.tsx   Short #1's full scene (not imported)
 ```
 
@@ -39,8 +39,8 @@ check the frame.
 | `Card` | `src, t, a, b, from="right"\|"left"\|"zoom", w=780, h=900, top=300, pos, tilt, slam, sepia=.25, fit` + children | paper-framed photo; slides in at `a`, Ken Burns, slides out at `b`; `pos` = object-position (keep the face in) |
 | `NameTag` | `t, a, name, sub?` | yellow name bar at the bottom of a Card (child of Card) |
 | `Bubble` | `t, a, text, x, y, color, bg, size=120, tail="left"\|"right", rot` | x/y = centre; only words someone actually said |
-| `Stamp` | `t, a, text, top=690, color, size=150, rot=-9` | slams down; pair with `stamp` sfx |
-| `Badge` | `t, a, text, x=90, y=240, bg, size=130, rot=-8` | year/label tag |
+| `Stamp` | `t, a, text, top=690, color, size=150, rot=-9, until?` | slams down; pair with `stamp` sfx; give every Stamp an `until` (s) or it stays to the last frame |
+| `Badge` | `t, a, text, x=90, y=240, bg, size=130, rot=-8, until?` | year/label tag; give every Badge an `until` (s) or it stays to the last frame |
 | `Emoji` | `t, a, char, x, y, size=290, rot, wobble, crossAt?` | `crossAt`: greys out + red slash ("no bell needed") |
 | `CountUp` | `t, a, b, from, to, unit?, top=860, bar=true, show=a, until, decimals` | counts from word a to word b: span a whole phrase |
 | `Avatar` | `src, t, a, x, y, size=300, pos` | round face beside a diagram |
@@ -73,3 +73,16 @@ kit/Outro.tsx: `SubscribeBadge`, `OUTRO_S = 3.0` (min 2.5), name/tagline/avatar 
   read at phone size (small object on a white background) is better as an emoji or a drawn diagram.
 - `npx tsc --noEmit -p .` before rendering; `anim.py still` for single frames is faster than a render.
 - A 33 s Short renders in ~3 min on an M-series Mac (8 tabs).
+
+## One import
+
+`src/kit/index.ts` re-exports the whole kit and the timing helpers, so a scene needs one import line
+(the old paths `./kit/anim`, `./kit/props`, `./kit/overlays`, `./kit/Outro`, `./timing` still work):
+
+```ts
+import { ramp, pulse, pop, Bubble, Stamp, Badge, Layer, Sfx, at, endOf, lineStart, lineEnd, WORDS, END, OUTRO_AT, LAST_T } from "./kit";
+```
+
+Give every `Stamp` and `Badge` an `until` (seconds) so it fades out; one left on screen breaks the loop
+(last frame must match the first). `ramp(t, a, b)` with `b <= a` (an anchor that lands before the previous
+one) no longer crashes: it becomes a near-instant step and logs a warning, so check the timing it points at.

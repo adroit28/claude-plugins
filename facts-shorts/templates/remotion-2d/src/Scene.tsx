@@ -1,7 +1,5 @@
 import { interpolate } from "remotion";
-import { WORDS, lineStart, OUTRO_AT, LAST_T } from "./timing";
-import { ramp } from "./kit/anim";
-import { Bubble, HookProp, Layer, Sfx, Title, clamp } from "./kit/props";
+import { WORDS, lineStart, OUTRO_AT, LAST_T, ramp, Bubble, HookProp, Layer, Sfx, Title, clamp } from "./kit";
 
 // STARTER scene: replace it with the storyboard (see the plugin's video/references/template.md).
 // It works with any script so `anim.py init` renders straight away: the hook prop rings, the

@@ -19,6 +19,16 @@ WPS = 2.95     # Short #1: 90 words in 30.5 s of speech at pace 1.0 (en-in-comme
 GIMMICK = [r"shock kar de", r"hil jaoge", r"dimaag hil", r"yakeen nahi hoga", r"you won'?t believe", r"lost an argument",
            r"99% log", r"koi nahi jaanta", r"nobody knows", r"secret jo", r"mind[- ]?blow"]
 IMG = (".jpg", ".jpeg", ".png", ".webp")
+HEDGE = r"reportedly|kaha jaata hai|maana jaata hai|bola jaata hai"
+WEAK = r"unverified|unproven|unknown|reportedly|weak"
+
+
+def verdicts(md):
+    """{claim number: verdict text} from verify.md: '## 3. claim: VERDICT' headings and '| 3 | verdict | ...' table rows."""
+    out = {}
+    for m in re.finditer(r"^##\s+(\d+)\.\s*(.*)$", md, re.M): out[int(m.group(1))] = out.get(int(m.group(1)), "") + " " + m.group(2)
+    for m in re.finditer(r"^\|\s*(\d+)\s*\|\s*([^|]*)\|", md, re.M): out[int(m.group(1))] = out.get(int(m.group(1)), "") + " " + m.group(2)
+    return out
 
 
 def main():
@@ -45,6 +55,13 @@ def main():
             if len(q.split()) > 3: warn.append("line %s: %r is in quote marks: only exact words someone said go in quotes" % (l["id"], q))
         n = len(t.split())
         if n > 22: warn.append("line %s has %d words: split it (one idea per line)" % (l["id"], n))
+    vf = st.dir / "verify.md"
+    verd = verdicts(vf.read_text()) if vf.exists() else {}
+    for l in st.lines:   # WARN only; lines without a claim id are skipped silently
+        ids = [int(x) for x in re.findall(r"\d+", str(l.get("claim", l.get("claims", ""))))]
+        weak = [i for i in ids if re.search(WEAK, verd.get(i, ""), re.I)]
+        if weak and not re.search(HEDGE, l["text"] + " " + (l.get("tts") or ""), re.I):
+            warn.append("line %s states claim %s flatly but verify.md marks it weak/unverified: hedge it (reportedly / kaha jaata hai / maana jaata hai)" % (l["id"], ", ".join(map(str, weak))))
     n = len(st.script_words()); pace = d["narration"].get("pace", ch["pace"])
     lo, hi = ch["length"]["min"], d.get("length", {}).get("max", ch["length"]["max"])
     est = n / WPS / pace

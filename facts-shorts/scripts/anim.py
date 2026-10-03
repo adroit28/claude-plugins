@@ -22,7 +22,7 @@ check writes to build/check/: a 1 fps sheet of the whole Short, frames at --at t
 and last frames side by side; prints duration, loudness, true peak, and the SSIM of frame 0 vs the
 last frame above the caption band (1.0 = seamless loop). Stdlib + ffmpeg + node/npm.
 """
-import argparse, datetime as dt, json, pathlib, re, shutil, subprocess, sys
+import argparse, datetime as dt, json, os, pathlib, re, shutil, subprocess, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from common import FONTS, PLUGIN, Story, channel, duration, fonts_dir
 
@@ -105,6 +105,19 @@ def sheet(mp4, out, times, cols=6, w=270):
     print("  %s: %s" % (out.name, " ".join("%g" % t for t in times)))
 
 
+def loop_ssim(mp4, last):
+    """SSIM of frame 0 vs the last frame above the caption band (1.0 = seamless loop); None if ffmpeg gives no number.
+    The crop scales with the frame, and a second try seeks slightly earlier in case the last frame can't be decoded."""
+    crop = "crop=iw:ih*%d/1920:0:0" % CAPTION_TOP
+    for seek in (last, max(last - 0.05, 0)):
+        ss = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(mp4), "-ss", str(seek), "-i", str(mp4), "-filter_complex",
+                             "[0:v]trim=end_frame=1,%s[a];[1:v]trim=end_frame=1,%s[b];[a][b]ssim" % (crop, crop), "-f", "null", "-"],
+                            capture_output=True, text=True).stderr
+        m = re.search(r"All:\s*([\d.]+|inf)", ss)
+        if m: return 1.0 if m.group(1) == "inf" else float(m.group(1))
+    return None
+
+
 def check(st, a, mp4=None):
     mp4 = mp4 or st.mp4
     if not mp4.exists(): sys.exit("no %s yet: run anim.py render" % mp4.name)
@@ -115,17 +128,22 @@ def check(st, a, mp4=None):
         sheet(mp4, out / ("%s_1fps_%02d.jpg" % (tag, k // 24 + 1)), secs[k:k + 24])
     if a.at:
         sheet(mp4, out / ("%s_at.jpg" % tag), [float(x) for x in a.at], cols=min(6, len(a.at)), w=360)
-    sheet(mp4, out / ("%s_loop.jpg" % tag), [0, last], cols=2, w=360)
+    loop = out / ("%s_loop.jpg" % tag)
+    sheet(mp4, loop, [0, last], cols=2, w=360)
+    if not loop.exists():   # seeking exactly to the last frame can yield no frame (ffmpeg still exits 0): retry slightly earlier
+        sheet(mp4, loop, [0, max(last - 0.05, 0)], cols=2, w=360)
     ln = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(mp4), "-af", "loudnorm=print_format=json", "-f", "null", "-"],
                         capture_output=True, text=True).stderr
     j = json.loads(ln[ln.rindex("{"):ln.rindex("}") + 1])
-    crop = "crop=1080:%d:0:0" % CAPTION_TOP
-    ss = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(mp4), "-ss", str(last), "-i", str(mp4), "-filter_complex",
-                         "[0:v]trim=end_frame=1,%s[a];[1:v]trim=end_frame=1,%s[b];[a][b]ssim" % (crop, crop), "-f", "null", "-"],
-                        capture_output=True, text=True).stderr
-    m = re.search(r"All:([\d.]+)", ss)
+    sim = loop_ssim(mp4, last)
     print("duration %.2f s · loudness %s LUFS · true peak %s dBTP · loop SSIM %s (frame 0 vs last frame, above y %d)"
-          % (dur, j["input_i"], j["input_tp"], m.group(1) if m else "?", CAPTION_TOP))
+          % (dur, j["input_i"], j["input_tp"], "%.4f" % sim if sim is not None else "?", CAPTION_TOP))
+    if sim is None: print("WARN: loop SSIM could not be measured; compare the first and last tiles in %s_loop.jpg by eye" % tag)
+    elif sim < 0.7: print("WARN: loop SSIM %.2f < 0.7: the last frame does not match the first (a stamp/badge left on screen? an object not back in place?)" % sim)
+    target = float({"I": -14, **st.data.get("audio", {}).get("loudness", {})}["I"])
+    try: lufs = float(j["input_i"])
+    except ValueError: lufs = None
+    if lufs is None or abs(lufs - target) > 2: print("WARN: loudness %s LUFS is more than 2 LU from the target %g" % (j["input_i"], target))
     print("sheets in %s (tiles left to right, top to bottom, times as listed above; Read them)" % out)
 
 
@@ -133,7 +151,7 @@ def still(st, a):
     d = anim_dir(st); out = st.build / "check"; out.mkdir(parents=True, exist_ok=True)
     for t in a.at or []:
         f = round(float(t) * 30)
-        run(["npx", "remotion", "still", "src/index.ts", "Short", out / ("still_%s.png" % t), "--frame=%d" % f], cwd=d)
+        run(["npx", "remotion", "still", "src/index.ts", "Short", os.path.relpath(out / ("still_%s.png" % t), d), "--frame=%d" % f], cwd=d)  # relative: remotion cuts absolute paths at a space
 
 
 def render(st, a):
@@ -142,11 +160,17 @@ def render(st, a):
     sync(st)
     if a.frames:
         out = d / "out" / ("preview_%s.mp4" % a.frames)
-        run(["npx", "remotion", "render", "src/index.ts", "Short", out, "--frames=%s" % a.frames, "--muted"], cwd=d)
+        run(["npx", "remotion", "render", "src/index.ts", "Short", "out/preview_%s.mp4" % a.frames, "--frames=%s" % a.frames, "--muted"], cwd=d)
         print("preview:", out); return
     if st.rendered(): sys.exit("%s exists: versions only go up (the revise skill makes v%d)" % (st.mp4.name, st.version + 1))
     raw = d / "out" / ("raw_v%d.mp4" % st.version)
-    run(["npx", "remotion", "render", "src/index.ts", "Short", raw], cwd=d)
+    if not list((d / "public" / "sfx").glob("*.wav")):
+        print("no sound effects in %s: running sfx.py" % (d / "public" / "sfx"))
+        run([sys.executable, PLUGIN / "scripts" / "sfx.py", st.path])
+    # relative output: Remotion runs in anim/ and has cut an absolute path at a space ("personal projects")
+    run(["npx", "remotion", "render", "src/index.ts", "Short", "out/%s" % raw.name], cwd=d)
+    if not raw.exists():
+        sys.exit("render output not found; look for %s in the parent folder (and %s), then move it to %s" % (raw.name, d, raw))
     st.build.mkdir(exist_ok=True)
     shutil.copyfile(d / "src" / "Scene.tsx", st.build / ("scene_v%d.tsx" % st.version))
     L = {"I": -14, "TP": -1.5, "LRA": 11, **st.data.get("audio", {}).get("loudness", {})}

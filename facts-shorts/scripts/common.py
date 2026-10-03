@@ -62,9 +62,18 @@ class Story:
 
     def __init__(self, path):
         self.path = pathlib.Path(path).resolve()
+        if self.path.is_dir():
+            vs = sorted(self.path.glob("story.v*.json"), key=lambda q: int((re.search(r"\.v(\d+)\.json$", q.name) or [0, 0])[1]))
+            if vs:
+                self.path = vs[-1]
         if not self.path.exists():
             sys.exit("story not found: %s" % self.path)
-        self.data = json.loads(self.path.read_text())
+        try:
+            self.data = json.loads(self.path.read_text())
+        except (ValueError, IsADirectoryError, UnicodeDecodeError):
+            sys.exit("expected a story .json file, got %s; usage: <script> <folder>/story.v<N>.json" % self.path)
+        if not isinstance(self.data, dict):
+            sys.exit("expected a story .json file, got %s; usage: <script> <folder>/story.v<N>.json" % self.path)
         self.dir = self.path.parent
         self.build = self.dir / "build"
         self.root = content_dir(self.dir)

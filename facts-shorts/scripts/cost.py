@@ -41,13 +41,15 @@ FIELDS = ("input", "output", "write_5m", "write_1h", "read")
 def transcripts(session):
     if session and session.endswith(".jsonl"):
         main = pathlib.Path(session).expanduser()
+        if not main.exists():
+            print("cost: n/a (no Claude session log)"); sys.exit(0)
     else:
         sid = session or os.environ.get("CLAUDE_CODE_SESSION_ID")
         if not sid:
-            sys.exit("no session id: pass --session <id or transcript.jsonl>")
+            print("cost: n/a (no Claude session log)"); sys.exit(0)
         hits = glob.glob(os.path.expanduser("~/.claude/projects/*/%s.jsonl" % sid))
         if not hits:
-            sys.exit("transcript for session %s not found under ~/.claude/projects" % sid)
+            print("cost: n/a (no Claude session log)"); sys.exit(0)
         main = pathlib.Path(hits[0])
     return main.stem, [main] + sorted((main.parent / main.stem / "subagents").glob("*.jsonl"))
 

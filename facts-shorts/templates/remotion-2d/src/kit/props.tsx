@@ -92,27 +92,38 @@ export const NameTag = ({ t, a, name, sub }: { t: number; a: number; name: strin
   </div>
 );
 
-// Rubber stamp that slams down at `a` (pair with the "stamp" sfx).
-export const Stamp = ({ t, a, text, top = 690, color = RED, size = 150, rot = -9 }: {
-  t: number; a: number; text: string; top?: number; color?: string; size?: number; rot?: number;
-}) =>
-  t < a ? null : (
+// Rubber stamp that slams down at `a` (pair with the "stamp" sfx). Optional `until` (s): fades out
+// there; without it the stamp stays to the last frame, so give every stamp an `until`.
+export const Stamp = ({ t, a, text, top = 690, color = RED, size = 150, rot = -9, until }: {
+  t: number; a: number; text: string; top?: number; color?: string; size?: number; rot?: number; until?: number;
+}) => {
+  if (t < a) return null;
+  const gone = until === undefined ? 0 : ramp(t, until, until + 0.3);
+  if (gone >= 1) return null;
+  return (
     <div style={{ position: "absolute", left: 0, right: 0, top, textAlign: "center",
-      transform: `scale(${interpolate(t - a, [0, 0.12, 0.22], [2.4, 0.95, 1], clamp)}) rotate(${rot}deg)`, opacity: ramp(t, a, a + 0.06) }}>
+      transform: `scale(${interpolate(t - a, [0, 0.12, 0.22], [2.4, 0.95, 1], clamp)}) rotate(${rot}deg)`,
+      opacity: until === undefined ? ramp(t, a, a + 0.06) : ramp(t, a, a + 0.06) * (1 - gone) }}>
       <span style={{ fontFamily: "Anton", fontSize: size, color, border: `14px solid ${color}`, borderRadius: 18,
         padding: "0 36px", background: "rgba(255,255,255,.85)", letterSpacing: 4 }}>{text}</span>
     </div>
   );
+};
 
-// Year or label badge, tilted, popping in (e.g. "1877").
-export const Badge = ({ t, a, text, x = 90, y = 240, bg = "#c4161c", size = 130, rot = -8 }: {
-  t: number; a: number; text: string; x?: number; y?: number; bg?: string; size?: number; rot?: number;
-}) =>
-  t < a ? null : (
+// Year or label badge, tilted, popping in (e.g. "1877"). Optional `until` (s): fades out there;
+// give every badge an `until` or it stays to the last frame.
+export const Badge = ({ t, a, text, x = 90, y = 240, bg = "#c4161c", size = 130, rot = -8, until }: {
+  t: number; a: number; text: string; x?: number; y?: number; bg?: string; size?: number; rot?: number; until?: number;
+}) => {
+  if (t < a) return null;
+  const gone = until === undefined ? 0 : ramp(t, until, until + 0.3);
+  if (gone >= 1) return null;
+  return (
     <div style={{ position: "absolute", left: x, top: y, transform: `scale(${pop(t, a)}) rotate(${rot}deg)`,
       background: bg, color: "#fff", fontFamily: "Anton", fontSize: size, padding: "4px 34px", borderRadius: 16,
-      border: "8px solid #fff", boxShadow: "0 14px 30px rgba(0,0,0,.5)" }}>{text}</div>
+      border: "8px solid #fff", boxShadow: "0 14px 30px rgba(0,0,0,.5)", ...(until === undefined ? {} : { opacity: 1 - gone }) }}>{text}</div>
   );
+};
 
 // Emoji prop: pops in at `a`, optional wobble (a ringing bell) and grey-out + red slash (`crossAt`).
 export const Emoji = ({ t, a, char, x, y, size = 290, rot = 0, wobble = false, crossAt }: {

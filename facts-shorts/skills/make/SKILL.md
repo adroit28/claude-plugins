@@ -20,6 +20,8 @@ and follow it exactly; this file only sets the order and the stops.
 
 Skill files: `${CLAUDE_PLUGIN_ROOT}/skills/{ideas,research,script,narrate,video,metadata,revise}/SKILL.md`.
 
+`<story>` is the FULL path to `story.v<N>.json` (a file, never the folder). Pass that file to every script.
+
 After every step: `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/cost.py --step "<step>" --slug <slug>` from the
 project root, and its lines in that step's report.
 
@@ -34,9 +36,13 @@ with the notes from the prompt.
 Research and video leave large contexts. At the research → script and script → narrate handoffs,
 say "a new session in `<project root>` with this prompt is cheaper" and show the prompt. Continue
 here only if the user says so.
+Also offer a fresh session at the narrate → video handoff (video is the largest context).
+Pipe long tool output through `head -30`; don't Read whole files you only need a part of.
 
 ## Hard rules
 
 All hard rules of the skills apply, in particular: verified facts only, Roman-script Hinglish,
 no sources in the story file, downloads only after an explicit yes, free TTS (one take per request),
 versions only go up, and every video ends with the 3 s like & subscribe card.
+
+- If a command fails twice with the same error, stop: re-read the script's usage (`--help`), change the arguments, never repeat the identical call.

@@ -17,6 +17,8 @@ description: Write the Hinglish (Roman script) narration for a facts-channel Sho
 | Scripts | `${CLAUDE_PLUGIN_ROOT}/scripts/{validate.py,cost.py}` |
 | Example | `<root>/hello-short/story.v1.json` (schema differs: football-story/1.0; copy its lines, not its schema) |
 
+`<story>` is the FULL path to `story.v<N>.json` (a file, never the folder). Pass that file to every script.
+
 ## Inputs
 
 | Input | Default |
@@ -30,6 +32,8 @@ description: Write the Hinglish (Roman script) narration for a facts-channel Sho
 2. **Beats table → iterate.** Show:
    `| # | Beat | Hinglish line | Leads into next because | Claim (verify.md #) |`
    5–8 lines, 85–115 words (`words / 2.95` ≈ seconds at pace 1.0). Line 1 = the hook question; the twist by ~8 s; the last line pays off and echoes the hook. Under the table: estimated length, any claim you softened, and 1–2 alternative hooks. Then ask for edits. Apply the user's edits literally; when they cut a beat, check the next line still follows. Keep iterating until they approve. Self-check before every draft: no gimmick phrases, no beat that repeats a point, no paraphrase in quote marks, no word that confuses in context (e.g. "bell" right after Alexander Graham Bell: "ghanti").
+   Add a column `needs from earlier` to the table: a beat may only refer to things already said (Bell's Ahoy must be introduced before the payoff).
+   Re-read the note under each claim in verify.md (disputed dates, 'only one opened source', 'say reportedly'); the line must respect it.
 3. **Write `story.v1.json`** once approved:
    ```json
    {"schema": "facts-story/1.0", "id": "facts-<slug>", "slug": "<slug>", "version": 1, "format": "explainer-2d",

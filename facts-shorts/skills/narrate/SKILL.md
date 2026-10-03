@@ -16,6 +16,8 @@ Approved story in, `build/narration_*_lead*.wav` + `build/words_segments.json` r
 | Keys | `~/.config/facts-shorts/.env` `GEMINI_FREE_KEY=` (AI Studio key from a project without billing); falls back to `~/.config/football-stories/.env`. Never in the plugin or the story |
 | Channel | `<root>/channel.json`: `voice`, `style`, `pace` |
 
+`<story>` is the FULL path to `story.v<N>.json` (a file, never the folder). Pass that file to every script.
+
 ## Inputs
 
 | Input | Default |
