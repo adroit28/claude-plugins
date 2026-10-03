@@ -474,7 +474,8 @@ class R:
         ver = self.spec.get("version", 1); slug = self.spec.get("slug", "short")
         out = os.path.join(self.dir, self.spec.get("out") or "%s_v%s.mp4" % (slug, ver))
         outro_s = 0.0 if self.spec.get("outro") is False else max(float(self.spec.get("outro_s", 3.0)), 2.5)
-        json.dump({"total": total, "segments": rows, "out": out, "outro_s": outro_s}, open(os.path.join(self.B, "timeline_v%s.json" % ver), "w"), indent=1)
+        ovl = self.spec.get("outro_mode") == "overlay"  # card slides in over the last outro_s of the running picture (no extra seconds)
+        json.dump({"total": total, "segments": rows, "out": out, "outro_s": 0.0 if ovl else outro_s, "outro_overlay_s": outro_s if ovl else 0.0}, open(os.path.join(self.B, "timeline_v%s.json" % ver), "w"), indent=1)
         if dry: return out
         segs, bad = [], []
         for i, s in enumerate(self.spec["segments"]):
@@ -528,7 +529,7 @@ class R:
         self.run([*inputs, "-filter_complex", fc, "-map", vmap, "-map", "[a]", *self.V, *self.A, "-movflags", "+faststart", "-t", "%.3f" % total, out])
         if outro_s:  # every Short ends with the like & subscribe card (spec "outro": false only when the user says so)
             from outro import append_outro
-            append_outro(out, seconds=outro_s, force=True)
+            append_outro(out, seconds=outro_s, force=True, overlay=self.spec.get("outro_mode") == "overlay")
         if bad: print("WARN %d segment(s) off by frames: %s. Fix the spec (whole-frame durations, clean footage after slow-mo windows) before trusting caption times." % (len(bad), bad), file=sys.stderr)
         print("rendered", out); return out
 

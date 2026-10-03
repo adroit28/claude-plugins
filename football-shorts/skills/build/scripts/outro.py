@@ -190,8 +190,9 @@ def strip(u):
     return out
 
 
-def append_outro(src, dst=None, seconds=3.0, force=False):
-    """Append the end card to src (written to dst, default in place). Returns the card length added (0 if already there)."""
+def append_outro(src, dst=None, seconds=3.0, force=False, overlay=False):
+    """Append the end card to src (written to dst, default in place). Returns the card length added (0 if already there).
+    overlay=True: no extra seconds; the card slides in over the last `seconds` of the running picture instead (no hold, no dimming)."""
     seconds = max(float(seconds), MIN_S)
     info = probe(src)
     if info["tagged"] and not force:
@@ -205,17 +206,19 @@ def append_outro(src, dst=None, seconds=3.0, force=False):
         n = int(round(seconds * FPS_OUT))
         for i in range(n):
             strip(i / FPS_OUT).save(os.path.join(tmp, "f_%03d.png" % i))
-        total = D + seconds
+        total = D if overlay else D + seconds
+        c0 = max(D - seconds, 0.0) if overlay else D  # when the card starts
         # card geometry: centred horizontally, lower third (below the subject, where captions sit)
         y0 = int(info["h"] * 0.68) - STRIP_H // 2
         x0 = (info["w"] - STRIP_W) // 2
-        fc = ("[0:v]tpad=stop_mode=clone:stop_duration=%.3f,eq=brightness=-0.16:enable='gte(t,%.3f)'[bg];"
+        bgf = "null" if overlay else "tpad=stop_mode=clone:stop_duration=%.3f,eq=brightness=-0.16:enable='gte(t,%.3f)'" % (seconds, D)
+        fc = ("[0:v]%s[bg];"
               "[1:v]format=rgba,setpts=PTS-STARTPTS+%.3f/TB[card];"
-              "[bg][card]overlay=%d:%d:eof_action=pass:format=auto,format=yuv420p[v];" % (seconds, D, D, x0, y0))
+              "[bg][card]overlay=%d:%d:eof_action=pass:format=auto,format=yuv420p[v];" % (bgf, c0, x0, y0))
         inputs = ["-i", src, "-framerate", str(FPS_OUT), "-i", os.path.join(tmp, "f_%03d.png")]
         # audio: the original, silence to the end, two soft ticks on the taps (like at 0.62 s, subscribe at 0.95 s)
         if info["audio"]:
-            fc += "[0:a]apad=whole_dur=%.3f[a0];" % total
+            fc += "[0:a]apad=whole_dur=%.3f[a0];" % total  # no-op when overlay (same length)
         else:
             inputs += ["-f", "lavfi", "-t", "%.3f" % total, "-i", "anullsrc=r=48000:cl=stereo"]
             fc += "[2:a]anull[a0];"
@@ -223,7 +226,7 @@ def append_outro(src, dst=None, seconds=3.0, force=False):
         mix = ["[a0]"]
         for j, (at, f) in enumerate(((0.62, 1250), (0.95, 880))):
             inputs += ["-f", "lavfi", "-t", "0.3", "-i", "sine=f=%d:d=0.12" % f]
-            ms = int((D + at) * 1000)
+            ms = int((c0 + at) * 1000)
             fc += "[%d:a]afade=t=out:st=0.03:d=0.09,volume=0.22,adelay=%d|%d[t%d];" % (k + j, ms, ms, j)
             mix.append("[t%d]" % j)
         fc += "%samix=inputs=%d:duration=first:normalize=0[a]" % ("".join(mix), len(mix))
@@ -235,16 +238,17 @@ def append_outro(src, dst=None, seconds=3.0, force=False):
         shutil.move(tmp_out, dst)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-    print("outro: added %.1f s like & subscribe card -> %s (%.2f s total)" % (seconds, dst, D + seconds))
-    return seconds
+    print("outro: %s %.1f s like & subscribe card -> %s (%.2f s total)" % ("overlaid last" if overlay else "added", seconds, dst, total))
+    return 0.0 if overlay else seconds
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("video"); ap.add_argument("--out"); ap.add_argument("--seconds", type=float, default=3.0)
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--overlay", action="store_true", help="overlay on the last seconds instead of appending")
     a = ap.parse_args()
-    append_outro(a.video, a.out, a.seconds, a.force)
+    append_outro(a.video, a.out, a.seconds, a.force, a.overlay)
 
 
 if __name__ == "__main__":

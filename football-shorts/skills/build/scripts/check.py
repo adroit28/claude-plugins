@@ -92,6 +92,7 @@ def main():
     tl = json.load(open(a.timeline)) if a.timeline else None
     outro = (tl or {}).get("outro_s", 0.0); body = dur - outro  # the like & subscribe card is not counted in the channel's length rule
     if outro: print("  incl. %.1f s like & subscribe card (content %.2f s)" % (outro, body))
+    elif (tl or {}).get("outro_overlay_s"): print("  like & subscribe card overlaid on the last %.1f s (content %.2f s)" % (tl["outro_overlay_s"], dur))
     elif tl is not None: warn.append("no like & subscribe end card: every video must end with one (outro.py)")
     if W / H != 9 / 16 and abs(W / H - 0.5625) > 0.01: warn.append("not 9:16")
     if body > 35: warn.append("over 35 s (channel rule 13-30 s)")
