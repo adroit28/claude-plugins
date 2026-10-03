@@ -109,6 +109,19 @@
         "credits",
         "cloud-console"
       ]
+    },
+    {
+      "name": "facts-shorts",
+      "source": "./facts-shorts",
+      "description": "Hinglish \"surprising story behind everyday things\" Shorts: topic ideas with a no-repeat ledger, fact research on a cheap Haiku subagent judged into verify.md, a Roman-script Hinglish script, free Gemini en-IN voice auditions, word timing from the take's pauses, and a 2D Remotion explainer kit with public-domain photos, bubbles, stamps, counters, synthesized sound effects and a like & subscribe loop ending.",
+      "keywords": [
+        "youtube",
+        "shorts",
+        "facts",
+        "hinglish",
+        "tts",
+        "remotion"
+      ]
     }
   ]
 }
