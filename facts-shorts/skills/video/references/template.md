@@ -36,9 +36,11 @@ check the frame.
 
 | Prop | Signature (main props) | Notes |
 |---|---|---|
-| `Card` | `src, t, a, b, from="right"\|"left"\|"zoom", w=780, h=900, top=300, pos, tilt, slam, sepia=.25, fit` + children | paper-framed photo; slides in at `a`, Ken Burns, slides out at `b`; `pos` = object-position (keep the face in) |
+| `Card` | `src, t, a, b, from="right"\|"left"\|"zoom", w=960, h?, top?, pos, tilt, slam, sepia=.25, fit` + children | paper-framed photo; slides in at `a`, Ken Burns, slides out at `b`. Without `h`: the photo's own shape (from `src/images.json`), fitted to and centred in the picture band, nothing cropped. With `h`: cropped, `pos` = object-position (keep the face in) |
+| `Pair` | `t, a, b, first: {src, tag?, sub?}, second: {...}, stagger=.25, gap=50` | two photos for one beat, stacked vertically, both uncropped and sized to fill the band; never put two Cards side by side |
+| `Hero` | `t, a, b, char, size=700, x=540, dy, wobble, crossAt?` | the main object of a beat with no photo, centred in the picture band and floating; two objects: `x` 290/790, size ~460 |
 | `NameTag` | `t, a, name, sub?` | yellow name bar at the bottom of a Card (child of Card) |
-| `Bubble` | `t, a, text, x, y, color, bg, size=120, tail="left"\|"right", rot` | x/y = centre; only words someone actually said |
+| `Bubble` | `t, a, text, x, y, color, bg, size=120, tail="left"\|"right", rot` | x/y = centre, moved in so the bubble stays 40 px inside the frame; text shrinks to fit; only words someone actually said |
 | `Stamp` | `t, a, text, top=690, color, size=150, rot=-9, until?` | slams down; pair with `stamp` sfx; give every Stamp an `until` (s) or it stays to the last frame |
 | `Badge` | `t, a, text, x=90, y=240, bg, size=130, rot=-8, until?` | year/label tag; give every Badge an `until` (s) or it stays to the last frame |
 | `Emoji` | `t, a, char, x, y, size=290, rot, wobble, crossAt?` | `crossAt`: greys out + red slash ("no bell needed") |
@@ -46,11 +48,11 @@ check the frame.
 | `Avatar` | `src, t, a, x, y, size=300, pos` | round face beside a diagram |
 | `Rings` | `t, x, y, r0, grow, speed, n, color, width, half` | expanding rings (sound, signal); `half` = right half only |
 | `HookProp` | `t, char, active, scale, y=560, opacity, size=470` | the opening object; shakes with rings while `active` |
-| `Title` | `t, accent, rest, opacity, top=120, size=120` | hook title, accent in gold |
+| `Title` | `t, accent, rest, opacity, top=110, size=120` | hook title, accent in gold; always one line (shrinks to fit), ends above `PIC_TOP` |
 | `Question` | `t, a, b, top=380` | giant wobbling "?" |
 | `Layer` / `Shake` / `Sway` | `transform/opacity` / `t, at, amp` / `t, from, deg, speed` | full-frame wrappers (absolute, inset 0) |
 | `Sfx` | `at, src, vol=0.5` | plays `public/sfx/<src>.wav` from `at` s |
-| helpers | `vis(t,a,b)`, `shake`, `clamp`, `back`, `PAPER`, `GOLD`, `RED` | |
+| helpers | `vis(t,a,b)`, `shake`, `clamp`, `back`, `PAPER`, `GOLD`, `RED`, `W`/`H`/`EDGE`, `TITLE_TOP`, `PIC_TOP`, `picBottom()`, `aspect(src)`, `fitSize`, `textWidth` | layout bands and text measuring (Stamp/Badge/Title/Bubble already fit themselves) |
 
 kit/anim.ts: `ramp(t,a,b,from,to,ease)`, `pulse(t,a,up,hold,down)`, `shown(t,a,b,in,out)`, `pop(t,at)`.
 kit/overlays.tsx: `Caption` (Short.tsx draws it; 2 words, y 1330), `Counter`, `Tag`, `STROKE(px)`.
@@ -68,6 +70,7 @@ kit/Outro.tsx: `SubscribeBadge`, `OUTRO_S = 3.0` (min 2.5), name/tagline/avatar 
 ## Gotchas
 
 - Any wrapper div with a transform must cover the frame (`Layer`): a plain div lands below the screen.
+- Photo sizes come from `src/images.json`, written by `anim.py sync`. A photo added to `src/` later needs a re-sync, or its Card falls back to w x 900 cropped.
 - Emoji render with Apple Color Emoji in headless Chrome on macOS; flags and multi-codepoint emoji (🏴‍☠️) work.
 - Photos: always look at `commons.py strip` first (some files come out rotated). A photo that doesn't
   read at phone size (small object on a white background) is better as an emoji or a drawn diagram.

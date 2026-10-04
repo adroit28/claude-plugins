@@ -3,7 +3,7 @@
 
   anim.py init   <story.vN.json> [--force-scene] [--no-install]   scaffold <edit>/anim/ from templates/remotion-2d, npm ci
   anim.py sync   <story>                     narration -> public/narration.wav, words -> src/words.json,
-                                             channel.json -> src/channel.json, src/ images -> public/
+                                             channel.json -> src/channel.json, src/ images -> public/ (sizes -> src/images.json)
   anim.py render <story> [--frames 0-120]    remotion render + loudnorm -> <slug>_vN.mp4, Scene.tsx snapshot, then check
   anim.py still  <story> --at 3.2 7.5        single frames -> build/check/still_<t>.png (fast look at a moment)
   anim.py check  <story> [--at 3.2 7.5]      sheets of the mp4 + loudness + loop match
@@ -40,6 +40,13 @@ def run(cmd, cwd=None, check=True, quiet=False):
     return subprocess.run([str(c) for c in cmd], cwd=cwd, check=check)
 
 
+def img_size(p):
+    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height",
+                        "-of", "csv=p=0", str(p)], capture_output=True, text=True)
+    try: w, h = (int(v) for v in r.stdout.strip().split(",")[:2]); return [w, h]
+    except ValueError: return None  # svg or unreadable: the Card falls back to w x 900
+
+
 def sync(st):
     d = anim_dir(st); nar = st.data["narration"]
     if not nar.get("audio") or not nar.get("words"):
@@ -53,6 +60,8 @@ def sync(st):
     (d / "src" / "channel.json").write_text(json.dumps({k: ch[k] for k in ("name", "tagline", "avatar")}, ensure_ascii=False))
     imgs = [p for p in sorted((st.dir / "src").glob("*")) if p.suffix.lower() in IMG] if (st.dir / "src").exists() else []
     for p in imgs: shutil.copyfile(p, d / "public" / p.name)
+    # pixel size of every photo, so a Card without h takes the photo's shape instead of cropping it
+    (d / "src" / "images.json").write_text(json.dumps({p.name: s for p in imgs if (s := img_size(p))}, ensure_ascii=False))
     print("synced narration (%.2f s), words, channel card, %d image(s) from src/" % (duration(st.p(nar["audio"])), len(imgs)))
 
 
