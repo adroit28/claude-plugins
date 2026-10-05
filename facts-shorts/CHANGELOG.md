@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 (Gemini-app route; additive, skills unchanged)
+- gemini/: Gemini skill (or Gem) description + instructions for ideas, research and script (`*-skill.md`, `facts copy`), with the worked examples inside the instructions (Gemini skills can't attach files); GUIDE.md
+- research-skill.md tightened after the red-light trial (Gemini invented quotes, 404 pages, homepage URLs, exam-prep sources, LaTeX book quotes when corrected): exact-page URLs only, banned source list, quote must state the claim, no MYTH without a source, self-check before answering, corrections never add unread sources
+- facts save verify audits the file: opens every URL (404/410/DNS = invented), flags homepages, banned domains, LaTeX, 'Status:' layout, missing sections/Wording lines; exit 2 on problems
+- quick-skill.md: optional Facts Quick Script skill (topic → beats → story JSON + an UNCHECKED facts file + visual ideas, no web research, lists the facts to check); `facts save quick <slug>` saves its facts file as verify.md without the source audit; `facts copy quick`
+- gemini/facts.sh + facts_save.py: `taken` (ledger to clipboard), `pick` (ledger + folder), `save verify|story` (clipboard -> file, takes the right fenced block from a whole reply, fills fixed story fields, runs validate.py, refuses to overwrite a narrated story), `check`, `narrate` (validate, one free take, segalign, open audio)
+
 ## 0.2.2 (phase 2, text only; appended lines, nothing reworded)
 - video: never run `npx remotion` directly; `<story>` is the full file path; text-prop, caption-band, edge and `until` rules in step 5; read the last frame sheet in step 6
 - make: stop after the same error twice; fresh session also at narrate -> video; trim long tool output; `<story>` definition

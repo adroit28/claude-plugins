@@ -19,6 +19,15 @@ AI voice, and a 2D animated explainer with real public-domain photos, built with
 Every step writes a handoff prompt (`<slug>/NEXT.md`) so the next one can start in a fresh, cheaper
 session, and reports the Claude cost so far (`scripts/cost.py`, list prices from the session transcript).
 
+## Gemini-app route (free with a Gemini plan)
+
+Ideas, research and the script can run in the Gemini chat app as three Gemini skills (or Gems), with Claude
+used only for the video. `gemini/` holds each skill's description and instructions (`ideas-skill.md`,
+`research-skill.md`, `script-skill.md`, plus `quick-skill.md` for a topic → script shortcut with no research; `facts copy <name> [description]` copies them; worked examples are inside the
+instructions, so nothing needs attaching), and `facts.sh`, which saves what you copied from Gemini
+into `verify.md` / `story.v1.json`, runs the checker, and narrates on the free Gemini TTS key.
+Step-by-step setup and use: [`gemini/GUIDE.md`](gemini/GUIDE.md).
+
 ## Install
 
 ```
