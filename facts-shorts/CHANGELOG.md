@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.1 (DepthWorld ruler + slam easing; additive, off by default)
+- kit/world.tsx: `rulerSpan` prop - the ruler gets its own zoom, capped so the screen always spans at least that fraction of the camera value (0.4: ticks 150/160/170 km at 160 km, every 2,000 km at 35,040 km). Fixes ticks that were metres apart and rounded to the same label at true-size stops. 0 (default) keeps the old behaviour
+- kit/world.tsx: `ease` ("in" | "out" | "lin") on a world key shapes the move that ends at it ("in" = accelerates into a slam); tick labels get thousands separators and more digits
+- first use: space-climb v2 (ruler fix; cold-open dive that slams onto the runner on a word, running figure, lift-off, loop back to the far-out frame)
+
+## 0.5.0 (scale-axis worlds; additive, 0.4.0 files untouched)
+- kit/world.tsx: DepthWorld (camera follows a value along a height/depth axis, eased with ramp in log space by default, px per metre keyed per time; sky gradient blended by value; ruler ticks at 1/2/5 steps; ground; live metre + km counter; true-scale flat objects (emoji or custom art, drawn as a dot, never enlarged, when under 16 px); pinned labels with optional off-screen edge chips; dashed reference lines; Cam punches), plus worldAt, skyAt, fmtM helpers; exported from kit/index.ts
+- first use: space-climb (how high is space?), a scale-axis Short in the style of the ocean-depth references
+
 ## 0.4.0 (motion kit; additive, old scenes render as before)
 - kit/motion.tsx: Cam, Kinetic, Draw, Dots, Versus, Swipe, Flash, LiveBg; Card gains kb/drift/punch; Short.tsx draws LiveBg under every scene (opt out with LIVE_BG = false)
 - prototype: sun-sneeze v2 (camera pushes, kinetic AANKH BAND / struck SNEEZE, 35/100 dot grid, swipes); v1 kept

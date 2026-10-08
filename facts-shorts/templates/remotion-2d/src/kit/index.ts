@@ -6,4 +6,5 @@ export * from "./overlays";
 export * from "./props";
 export * from "./motion";
 export * from "./Outro";
+export * from "./world";
 export * from "../timing";
