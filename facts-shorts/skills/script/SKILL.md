@@ -1,6 +1,6 @@
 ---
 name: script
-description: Write the Hinglish (Roman script) narration for a facts-channel Short from its verify.md - beats as a table (hook question, twist, payoff, each beat leading to the next, 30-40 s), iterate with the user, then write story.v1.json with a caption text and a spoken tts per line (numbers as words, pauses, CAPS emphasis) and no source citations, validate it, and hand off to narrate. Use when the user says "write the script", "draft the Hinglish script", "make the beats", "change line 3", pastes a facts-shorts script handoff, or invokes /facts-shorts:script.
+description: Write the Hinglish (Roman script) narration for a facts-channel Short from its verify.md - beats as a table (hook question, twist, payoff, each beat leading to the next, aim 40-45 s, hard max 60 s), iterate with the user, then write story.v1.json with a caption text and a spoken tts per line (numbers as words, pauses, CAPS emphasis) and no source citations, validate it, and hand off to narrate. Use when the user says "write the script", "draft the Hinglish script", "make the beats", "change line 3", pastes a facts-shorts script handoff, or invokes /facts-shorts:script.
 ---
 
 # Script
@@ -24,14 +24,14 @@ description: Write the Hinglish (Roman script) narration for a facts-channel Sho
 | Input | Default |
 |---|---|
 | Slug + handoff notes | most recent `picked` topic |
-| Length | channel.json (30–40 s) |
+| Length | channel.json (aim 40–45 s, hard max 60 s) |
 
 ## Procedure
 
 1. **Read** style.md, `verify.md`, channel.json. Only VERIFIED claims become statements; myths only as myths; interpretations only hedged ("shayad isliye") or cut.
 2. **Beats table → iterate.** Show:
    `| # | Beat | Hinglish line | Leads into next because | Claim (verify.md #) |`
-   5–8 lines, 85–115 words (`words / 2.95` ≈ seconds at pace 1.0). Line 1 = the hook question; the twist by ~8 s; the last line pays off and echoes the hook. Under the table: estimated length, any claim you softened, and 1–2 alternative hooks. Then ask for edits. Apply the user's edits literally; when they cut a beat, check the next line still follows. Keep iterating until they approve. Self-check before every draft: no gimmick phrases, no beat that repeats a point, no paraphrase in quote marks, no word that confuses in context (e.g. "bell" right after Alexander Graham Bell: "ghanti").
+   6–9 lines, aim 120–135 words (40–45 s), hard max 60 s (~175 words) (`words / 2.95` ≈ seconds at pace 1.0). Line 1 = the hook question; the twist by ~8 s; the last line pays off and echoes the hook. Under the table: estimated length, any claim you softened, and 1–2 alternative hooks. Then ask for edits. Apply the user's edits literally; when they cut a beat, check the next line still follows. Keep iterating until they approve. Self-check before every draft: no gimmick phrases, no beat that repeats a point, no paraphrase in quote marks, no word that confuses in context (e.g. "bell" right after Alexander Graham Bell: "ghanti").
    Add a column `needs from earlier` to the table: a beat may only refer to things already said (Bell's Ahoy must be introduced before the payoff).
    Re-read the note under each claim in verify.md (disputed dates, 'only one opened source', 'say reportedly'); the line must respect it.
 3. **Write `story.v1.json`** once approved:
@@ -40,7 +40,7 @@ description: Write the Hinglish (Roman script) narration for a facts-channel Sho
     "status": "script", "title": "<working title>", "category": "<category>",
     "narration": {"style": "<channel.json style unless the user changed it>", "pace": 1.0, "lead": 0.5,
       "lines": [{"id": "L1", "no_claim": true, "text": "<caption>", "tts": "<spoken, only if it differs>"}]},
-    "disclosure": "Narration voice is AI-generated.", "length": {"max": 40}}
+    "disclosure": "Narration voice is AI-generated.", "length": {"max": 60}}
    ```
    - Every line has `"no_claim": true` (claims are traced in verify.md, not cited here). No URLs, no facts list.
    - `text` = caption: digits OK ("1877", "10-20 feet"), quote marks only around exact words.

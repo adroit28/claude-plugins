@@ -24,7 +24,7 @@ CHANNEL_DEFAULTS = {
     "avatar": "☎️",
     "promise": "The surprising story behind things you see every day.",
     "language": "Hinglish in Roman script: mostly English words, light Hindi as glue",
-    "length": {"min": 30, "max": 40},
+    "length": {"min": 30, "max": 60},
     "voice": "gemini:en-in-commercial-1",
     "pace": 1.0,
     "style": STYLE,

@@ -6,7 +6,7 @@ this file is the writing guide. When the two disagree, channel.json wins.
 ## Format
 
 - **Promise:** the surprising story behind something viewers see every day. India first, broad topics.
-- **Length:** 30–40 s of narration (≈ 85–115 words at pace 1.0), then the 3 s like & subscribe card.
+- **Length:** aim 40–45 s of narration (≈ 120–135 words at pace 1.0), hard max 60 s (≈ 175 words), then the 3 s like & subscribe card.
 - **Shape:** hook question → twist → payoff. 5–8 lines, one idea per line, and every line must lead
   into the next (a reason, a "but", a consequence). If a line could be removed without the story
   breaking, remove it.

@@ -1,6 +1,6 @@
 # facts-shorts
 
-Narrated 30–40 s YouTube Shorts in Hinglish (Roman script) about the surprising story behind
+Narrated 40–45 s (max 60 s) YouTube Shorts in Hinglish (Roman script) about the surprising story behind
 everyday things: a verified story, a script that sounds like a friend telling a fun fact, a free
 AI voice, and a 2D animated explainer with real public-domain photos, built with Remotion.
 
@@ -56,7 +56,7 @@ cost_log.jsonl    one line per cost report
 
 ```json
 {"name": "", "tagline": "for more surprising stories", "avatar": "☎️",
- "voice": "gemini:en-in-commercial-1", "pace": 1.0, "length": {"min": 30, "max": 40},
+ "voice": "gemini:en-in-commercial-1", "pace": 1.0, "length": {"min": 30, "max": 60},
  "style": "AUDIO PROFILE: ... DELIVERY: ...", "timezone": "Asia/Kolkata",
  "categories": ["money/objects", "medicine/science", "superstitions", "words/habits", "India history"]}
 ```

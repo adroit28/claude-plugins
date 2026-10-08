@@ -147,6 +147,18 @@ Over 40 s? Ask the script chat to cut words.
 Visual ideas: <paste the visual-ideas block>
 ```
 
+The **content folder** is the folder `FACTS_DIR` points to (the one that holds `channel.json`, `IDEAS.md` and one
+subfolder per Short). Run `echo $FACTS_DIR` to see it. Example, for the slug `sun-sneeze`:
+
+```
+/facts-shorts:video /Users/bansal.suraj/Documents/ai-learning/personal projects/facts-channel/sun-sneeze/story.v1.json
+Visual ideas:
+L1: <what's on screen>
+L2: <what's on screen>
+```
+
+Run it in Claude Code from `personal projects`, because the plugin's skills are only found from that folder.
+
 From here everything is the normal plugin: storyboard, photos (only after your yes), render, then
 `/facts-shorts:metadata` and `/facts-shorts:revise`.
 

@@ -98,6 +98,6 @@ if out.exists():
 # Fill the fixed fields so a small slip by Gemini doesn't matter.
 data.update({"schema": "facts-story/1.0", "slug": slug, "id": "facts-" + slug, "version": 1, "status": "script"})
 data.setdefault("format", "explainer-2d"); data.setdefault("disclosure", "Narration voice is AI-generated.")
-data.setdefault("length", {"max": 40}); data.setdefault("narration", {}).setdefault("pace", 1.0)
+data.setdefault("length", {"max": 60}); data.setdefault("narration", {}).setdefault("pace", 1.0)
 out.write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n")
 print("saved", out)

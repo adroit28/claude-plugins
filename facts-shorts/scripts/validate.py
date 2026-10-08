@@ -5,7 +5,7 @@
 
 script stage: schema tag, unique line ids, verify.md next to the story, no sources or URLs in the
 story (they live in verify.md), every line whose caption has digits has a `tts` with the number
-spelled out, a length estimate inside the channel's 30-40 s, the disclosure line, and warnings for
+spelled out, a length estimate inside the channel's length limit (30-60 s), the disclosure line, and warnings for
 gimmick phrasing, quote marks around more than a couple of words (paraphrases must not look like
 quotes), Devanagari script (narration is Roman-script Hinglish), and lines that are too long.
 video stage adds: narration audio and words exist and cover every script word, the anim project
