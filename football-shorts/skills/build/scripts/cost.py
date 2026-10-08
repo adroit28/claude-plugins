@@ -26,7 +26,18 @@ def shorts_dir():
     """FOOTBALL_SHORTS_DIR, else $CLAUDE_PROJECT_DIR/shorts (the same folder the other scripts write to)."""
     if os.environ.get("FOOTBALL_SHORTS_DIR"):
         return pathlib.Path(os.environ["FOOTBALL_SHORTS_DIR"]).resolve()
-    return (pathlib.Path(os.environ.get("CLAUDE_PROJECT_DIR", ".")) / "shorts").resolve()
+    cpd = os.environ.get("CLAUDE_PROJECT_DIR")
+    if cpd and (pathlib.Path(cpd) / "shorts").exists():
+        return (pathlib.Path(cpd) / "shorts").resolve()
+    # CLAUDE_PROJECT_DIR is not always set (a Bash tool shell): look up from the current folder for the real root
+    # (the folder holding fonts/) instead of inventing a shorts/ wherever we happen to be.
+    here = pathlib.Path.cwd().resolve()
+    for d in [here, *here.parents]:
+        if (d / "fonts").is_dir() and (d / "cost_log.jsonl").exists():
+            return d
+        if (d / "shorts" / "fonts").is_dir():
+            return d / "shorts"
+    return (pathlib.Path(cpd or ".") / "shorts").resolve()
 
 # $ per million tokens: input, output, 5-minute cache write, 1-hour cache write, cache read.
 # List prices as of 2026-09. The longest matching model-id prefix wins; edit here when prices change.
@@ -124,8 +135,10 @@ def main():
            "cost": {k: round(v, 4) for k, v in now.items()}, "step_cost": round(sum(step.values()), 4),
            "tokens": by_model, "tools": tools}
     if not a.no_log:
-        log.parent.mkdir(parents=True, exist_ok=True)
-        with log.open("a") as fh: fh.write(json.dumps(rec) + "\n")
+        if (log.parent / "fonts").is_dir():
+            with log.open("a") as fh: fh.write(json.dumps(rec) + "\n")
+        else:  # never create a cost_log.jsonl outside the shorts root (it used to litter every folder we ran from)
+            print("warn: no shorts root found from here (no fonts/ folder); not logged. Set FOOTBALL_SHORTS_DIR or run from inside it.")
 
     print("Claude cost at API list prices, after: %s" % a.step)
     print("  this step     %s" % fmt(step))

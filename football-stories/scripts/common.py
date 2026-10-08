@@ -18,7 +18,18 @@ def shorts_dir(edit_dir=None):
         return pathlib.Path(os.environ["FOOTBALL_SHORTS_DIR"]).resolve()
     if edit_dir and (pathlib.Path(edit_dir).resolve().parent / "fonts").is_dir():
         return pathlib.Path(edit_dir).resolve().parent
-    return (pathlib.Path(os.environ.get("CLAUDE_PROJECT_DIR", ".")) / "shorts").resolve()
+    cpd = os.environ.get("CLAUDE_PROJECT_DIR")
+    if cpd and (pathlib.Path(cpd) / "shorts").exists():
+        return (pathlib.Path(cpd) / "shorts").resolve()
+    # CLAUDE_PROJECT_DIR is not always set (a Bash tool shell): look up from the current folder for the real root
+    # (the folder holding fonts/) instead of inventing a shorts/ wherever we happen to be.
+    here = pathlib.Path.cwd().resolve()
+    for d in [here, *here.parents]:
+        if (d / "fonts").is_dir() and (d / "cost_log.jsonl").exists():
+            return d
+        if (d / "shorts" / "fonts").is_dir():
+            return d / "shorts"
+    return (pathlib.Path(cpd or ".") / "shorts").resolve()
 
 
 class Story:
