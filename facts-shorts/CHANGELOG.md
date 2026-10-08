@@ -3,6 +3,7 @@
 ## 0.4.0 (motion kit; additive, old scenes render as before)
 - kit/motion.tsx: Cam, Kinetic, Draw, Dots, Versus, Swipe, Flash, LiveBg; Card gains kb/drift/punch; Short.tsx draws LiveBg under every scene (opt out with LIVE_BG = false)
 - prototype: sun-sneeze v2 (camera pushes, kinetic AANKH BAND / struck SNEEZE, 35/100 dot grid, swipes); v1 kept
+- fix: cost.py (via common.content_dir) finds the real content root by walking up to channel.json and no longer creates a stray facts-channel/cost_log.jsonl in whatever folder it was run from (CLAUDE_PROJECT_DIR is unset in the Bash tool); it warns and skips logging if no root is found
 - not yet: cutout/parallax layers (needs rembg model download), Lottie stickers
 
 ## 0.3.0 (Gemini-app route; additive, skills unchanged)

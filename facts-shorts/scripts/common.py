@@ -39,7 +39,18 @@ def content_dir(edit_dir=None):
         return pathlib.Path(os.environ["FACTS_DIR"]).expanduser().resolve()
     if edit_dir and (pathlib.Path(edit_dir).resolve().parent / "channel.json").exists():
         return pathlib.Path(edit_dir).resolve().parent
-    return (pathlib.Path(os.environ.get("CLAUDE_PROJECT_DIR", ".")) / "facts-channel").resolve()
+    cpd = os.environ.get("CLAUDE_PROJECT_DIR")
+    if cpd and (pathlib.Path(cpd) / "facts-channel").exists():
+        return (pathlib.Path(cpd) / "facts-channel").resolve()
+    # CLAUDE_PROJECT_DIR is not always set (a Bash tool shell): look up from the current folder for the real root
+    # (the folder holding channel.json) instead of inventing a facts-channel/ wherever we happen to be.
+    here = pathlib.Path.cwd().resolve()
+    for d in [here, *here.parents]:
+        if (d / "channel.json").exists():
+            return d
+        if (d / "facts-channel" / "channel.json").exists():
+            return d / "facts-channel"
+    return (pathlib.Path(cpd or ".") / "facts-channel").resolve()
 
 
 def channel(root=None):

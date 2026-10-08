@@ -121,8 +121,10 @@ def main():
            "cost": {k: round(v, 4) for k, v in now.items()}, "step_cost": round(sum(step.values()), 4),
            "tokens": by_model, "tools": tools}
     if not a.no_log:
-        log.parent.mkdir(parents=True, exist_ok=True)
-        with log.open("a") as fh: fh.write(json.dumps(rec) + "\n")
+        if (log.parent / "channel.json").exists():
+            with log.open("a") as fh: fh.write(json.dumps(rec) + "\n")
+        else:  # never create a cost_log.jsonl outside the content root (it used to litter every folder we ran from)
+            print("warn: no facts-channel root found from here (no channel.json); not logged. Set FACTS_DIR or run from inside it.")
 
     print("Claude cost at API list prices, after: %s" % a.step)
     print("  this step     %s" % fmt(step))
