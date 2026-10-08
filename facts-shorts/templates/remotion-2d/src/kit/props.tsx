@@ -71,9 +71,10 @@ export const Sway = ({ t, from, children, deg = 2, speed = 3 }: { t: number; fro
 // cropped: text on a cereal box or a poster stays readable), shrinks to fit the picture band
 // and is centred in it; pass `h` only to crop on purpose (a face), with `pos` as the
 // object-position. Children (a NameTag, a Bubble) are positioned relative to the card.
-export const Card = ({ src, t, a, b, from = "right", w: w0 = 960, h: h0, top: top0, pos = "50% 20%", tilt = 0, slam, sepia = 0.25, fit = "cover", children }: {
+export const Card = ({ src, t, a, b, from = "right", w: w0 = 960, h: h0, top: top0, pos = "50% 20%", tilt = 0, slam, sepia = 0.25, fit = "cover", kb = 0.06, drift = 0, punch = [], children }: {
   src: string; t: number; a: number; b: number; from?: "left" | "right" | "zoom"; w?: number; h?: number; top?: number;
   pos?: string; tilt?: number; slam?: boolean; sepia?: number; fit?: "cover" | "contain"; children?: React.ReactNode;
+  kb?: number; drift?: number; punch?: number[];  // slow push-in end (0.06 = 6 %), sideways drift in px (kept inside the photo), fast +8 % pushes on word times
 }) => {
   if (!vis(t, a - 0.01, b + 0.3)) return null;
   const band = picBottom() - (top0 ?? PIC_TOP);
@@ -85,14 +86,17 @@ export const Card = ({ src, t, a, b, from = "right", w: w0 = 960, h: h0, top: to
   const out = ramp(t, b, b + 0.3);
   const dx = from === "zoom" ? 0 : (from === "left" ? -1 : 1) * 1200 * (1 - k);
   const s = from === "zoom" || slam ? interpolate(t - a, [0, 0.18, 0.32], [1.6, 0.96, 1], clamp) : 1;
-  const kb = 1 + 0.06 * ramp(t, a, b, 0, 1, Easing.linear);
+  const pn = punch.reduce((m, q) => Math.max(m, 0.08 * Math.max(0, Math.min(1, (t - q) / 0.08)) * (1 - Math.max(0, Math.min(1, (t - q - 0.18) / 0.5)))), 0);
+  const kbs = 1 + kb * ramp(t, a, b, 0, 1, Easing.linear) + pn;
+  const room = ((kbs - 1) / 2) * w;                       // how far the photo can slide before an edge shows
+  const dxi = Math.max(-room, Math.min(room, drift * ramp(t, a, b, -0.5, 0.5, Easing.linear)));
   return (
     <div style={{ position: "absolute", left: 540 - w / 2, top, width: w, height: h, opacity: 1 - out,
       transform: `translateX(${dx - out * 300}px) scale(${s}) rotate(${tilt}deg)` }}>
       <div style={{ width: "100%", height: "100%", overflow: "hidden", borderRadius: 18, border: `14px solid ${PAPER}`,
         boxShadow: "0 30px 70px rgba(0,0,0,.6)", background: PAPER }}>
         <Img src={staticFile(src)} style={{ width: "100%", height: "100%", objectFit: fit, objectPosition: pos,
-          transform: `scale(${kb})`, filter: `sepia(${sepia}) contrast(1.05)` }} />
+          transformOrigin: pos, transform: `translateX(${dxi}px) scale(${kbs})`, filter: `sepia(${sepia}) contrast(1.05)` }} />
       </div>
       {children}
     </div>

@@ -89,3 +89,20 @@ import { ramp, pulse, pop, Bubble, Stamp, Badge, Layer, Sfx, at, endOf, lineStar
 Give every `Stamp` and `Badge` an `until` (seconds) so it fades out; one left on screen breaks the loop
 (last frame must match the first). `ramp(t, a, b)` with `b <= a` (an anchor that lands before the previous
 one) no longer crashes: it becomes a near-instant step and logs a warning, so check the timing it points at.
+
+## Motion kit (0.4.0, `kit/motion.tsx`)
+
+Use these to stop a Short feeling like a slideshow. Rule of thumb: every beat moves (camera or type), and at least one beat per Short is kinetic type or a drawn diagram instead of an emoji.
+
+| Component | Use |
+|---|---|
+| `Card kb drift punch` | Photo push-in (`kb` 0.12-0.16), sideways drift in px, `punch={[T.word]}` = fast +8 % push on a word; `pos` is the focus point |
+| `Cam keys punch` | Wrap a diagram or beat: eased zoom/pan keyframes `{at, s, x, y}`, `punch` times. Keep zoom <= 1.1 or edge labels clip |
+| `Kinetic text a b` | A word as the whole picture, slams in with shake; `strikeAt` draws a red strike-through (a myth), `sub` a small line under it. `\n` = stacked lines |
+| `Draw d a b` | SVG path that draws itself with a glowing head (a path, a zigzag spark) |
+| `Dots from to` | 10x10 people-grid that fills across a phrase, with `n / 100` readout; only for an "x out of 100" number |
+| `Versus myth truth` | Top half myth, bottom half truth, gold divider wipes in |
+| `Swipe at` / `Flash at` | Gold wipe over a cut (start it at `lineStart - 0.22`, pair with whoosh); impact flash. Use sparingly: one swipe at the myth-to-truth turn, not every line |
+| `LiveBg` | Automatic in `Short.tsx`: drifting glows, dust, vignette. Scene may `export const BEATS = [secs]` so the glow kicks on story turns, or `export const LIVE_BG = false` |
+
+Keep emoji accents out of kinetic text (they overlap); put them below it and size them <= 220.

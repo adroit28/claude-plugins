@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0 (motion kit; additive, old scenes render as before)
+- kit/motion.tsx: Cam, Kinetic, Draw, Dots, Versus, Swipe, Flash, LiveBg; Card gains kb/drift/punch; Short.tsx draws LiveBg under every scene (opt out with LIVE_BG = false)
+- prototype: sun-sneeze v2 (camera pushes, kinetic AANKH BAND / struck SNEEZE, 35/100 dot grid, swipes); v1 kept
+- not yet: cutout/parallax layers (needs rembg model download), Lottie stickers
+
 ## 0.3.0 (Gemini-app route; additive, skills unchanged)
 - gemini/: Gemini skill (or Gem) description + instructions for ideas, research and script (`*-skill.md`, `facts copy`), with the worked examples inside the instructions (Gemini skills can't attach files); GUIDE.md
 - research-skill.md tightened after the red-light trial (Gemini invented quotes, 404 pages, homepage URLs, exam-prep sources, LaTeX book quotes when corrected): exact-page URLs only, banned source list, quote must state the claim, no MYTH without a source, self-check before answering, corrections never add unread sources
