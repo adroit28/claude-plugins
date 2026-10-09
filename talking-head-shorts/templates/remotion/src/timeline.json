@@ -1,0 +1,3 @@
+{"fps":30,"total":2,"hook":0,"end":2,"files":{"x":{"video":"clips/x.mp4","audio":"audio/x.wav"}},
+ "chunks":[{"id":"C1","clip":"x","a":0,"b":2,"o":0,"d":2,"hold":0,"speed":1,"voice":true,"z":[[0,1],[2,1]],"vid":"x","ca":0}],
+ "phrases":[],"marks":{},"shakes":[],"flashes":[],"whips":[]}

@@ -1,0 +1,21 @@
+{
+  "name": "talking-head-shorts",
+  "version": "0.2.0",
+  "description": "Edits ANY talking-head video of yours into a punchy 1080x1920 Short, topic-agnostic: probe + black-blink pre-pass, local Whisper with unclear stretches asked back to you (Hinglish spelled as you write it), a cheap-model beat map, a one-table edit plan for your OK (3 hook options, punch-in steps, cutaways, pills and counters, slams, HOT caption words, sfx), an optional Robust Video Matting background swap behind an edge-sheet approval stop, a data-driven Remotion template (one edit.json, no per-video TSX), voice cleanup + synthesized sfx + drone mixed to -14 LUFS, a like & subscribe outro, numbered-feedback revisions as new versions, and the Claude cost after every stage with fresh-session handoffs. v0.2 adds a multi-clip route (timeline skill): several takes as chunks, a pre-joined source located by cross-correlation, CFR/upscale intake with retake hint, word QA, Apple Vision face tracking, a removable-scene graphics kit, a speech-aware sfx resolver and ducked music, and a stop with a cost report after every step.",
+  "author": {
+    "name": "adroit28"
+  },
+  "keywords": [
+    "youtube",
+    "shorts",
+    "talking-head",
+    "captions",
+    "remotion",
+    "video-matting",
+    "hinglish",
+    "multi-clip",
+    "timeline"
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/adroit28/claude-plugins"
+}
