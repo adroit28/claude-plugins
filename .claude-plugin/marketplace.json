@@ -122,6 +122,19 @@
         "tts",
         "remotion"
       ]
+    },
+    {
+      "name": "talking-head-shorts",
+      "source": "./talking-head-shorts",
+      "description": "Edits any talking-head video into a punchy vertical Short: local Whisper with unclear words asked back, beat map, a one-table edit plan, optional RVM background swap behind an approval stop, a data-driven Remotion template (hook, punch-ins, captions, cutaways, pills, slams), sfx + drone mix, outro, numbered-feedback revisions, cost after each stage.",
+      "keywords": [
+        "youtube",
+        "shorts",
+        "talking-head",
+        "captions",
+        "remotion",
+        "video-matting"
+      ]
     }
   ]
 }
