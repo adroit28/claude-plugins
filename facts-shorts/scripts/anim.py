@@ -18,11 +18,16 @@ src/Scene.tsx to build/scene_vN.tsx so every version's scene is kept. --frames r
 preview to anim/out/preview_<a>-<b>.mp4 and stops. The final file is the raw render with loudnorm
 I=-14:TP=-1.5:LRA=11, video stream copied, AAC 192k, +faststart.
 
+0.8.0 story options ("video" block, all optional): "captions": false | "hotCaptions": true (word-by-word captions, the
+story's CAPS words hot; "hot": ["galti", "L3:dhakel", "L5:nahi#2"] overrides them) | "music": true (a synthesized bed,
+ducked under the narration, mixed in at render) | "grain": true or 0.02-0.08 (film grain, default off: it bloats the file).
+sync writes them to src/options.json; render also warns when an sfx peak lands on a HOT word (sfxprobe.mjs).
+
 check writes to build/check/: a 1 fps sheet of the whole Short, frames at --at times, the first
 and last frames side by side; prints duration, loudness, true peak, and the SSIM of frame 0 vs the
 last frame above the caption band (1.0 = seamless loop). Stdlib + ffmpeg + node/npm.
 """
-import argparse, datetime as dt, json, os, pathlib, re, shutil, subprocess, sys
+import argparse, datetime as dt, json, math, os, pathlib, re, shutil, subprocess, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from common import FONTS, PLUGIN, Story, channel, duration, fonts_dir
 
@@ -47,6 +52,50 @@ def img_size(p):
     except ValueError: return None  # svg or unreadable: the Card falls back to w x 900
 
 
+def _clean(w):
+    return re.sub(r"[^a-z0-9]", "", w.lower())
+
+
+def _words(st):
+    j = json.loads(st.p(st.data["narration"]["words"]).read_text())
+    return j.get("words", j) if isinstance(j, dict) else j
+
+
+def hot_words(st):
+    """[[line, word index]] of the HOT caption words: the story's `video.hot` list if given ("galti" = every match,
+    "L3:dhakel", "L5:nahi#2" = second match in that line, or a [line, i] pair), else the CAPS words of each line's tts
+    (the spoken text; falls back to the caption text). A CAPS token is matched to the same word (nth occurrence) in the
+    line's caption words, so a spelled-out number or a <pause> tag never shifts it."""
+    words = _words(st); out = []
+    def find(line, key, nth):
+        hits = [w for w in words if w["line"] == line and _clean(w["w"]) == key]
+        return [hits[nth - 1]["i"]] if len(hits) >= nth else []
+    override = st.data.get("video", {}).get("hot")
+    if override is not None:
+        for item in override:
+            if isinstance(item, (list, tuple)): out.append([item[0], int(item[1])]); continue
+            line, _, rest = item.rpartition(":"); key, _, nth = rest.partition("#"); key = _clean(key)
+            lines = [line] if line else sorted({w["line"] for w in words})
+            for l in lines:
+                n = int(nth) if nth else None
+                hits = [w for w in words if w["line"] == l and _clean(w["w"]) == key]
+                for h in (hits[n - 1:n] if n else hits): out.append([l, h["i"]])
+        return out
+    for ln in st.data["narration"].get("lines", []):
+        toks = re.sub(r"<[^>]*>", " ", ln.get("tts") or ln.get("text", "")).split(); seen = {}
+        for tok in toks:
+            key = _clean(tok); letters = re.sub(r"[^A-Za-z]", "", tok)
+            if not key: continue
+            seen[key] = seen.get(key, 0) + 1
+            if len(letters) >= 2 and letters.isupper(): out += [[ln["id"], i] for i in find(ln["id"], key, seen[key])]
+    return out
+
+
+def hot_labels(st, hot):
+    byk = {(w["line"], w["i"]): w["w"] for w in _words(st)}
+    return [(l, byk.get((l, i), "?").strip(".,!?:;").lower()) for l, i in hot]
+
+
 def sync(st):
     d = anim_dir(st); nar = st.data["narration"]
     if not nar.get("audio") or not nar.get("words"):
@@ -56,7 +105,12 @@ def sync(st):
     shutil.copyfile(st.p(nar["words"]), d / "src" / "words.json")
     ch = channel(st.root)
     # captions are optional: story "video": {"captions": false} hides them (default on)
-    (d / "src" / "options.json").write_text(json.dumps({"captions": st.data.get("video", {}).get("captions", True)}))
+    vid = st.data.get("video", {})
+    hot = hot_words(st) if vid.get("hotCaptions") else []
+    grain = vid.get("grain", 0); grain = 0.06 if grain is True else min(float(grain or 0), 0.08)
+    (d / "src" / "options.json").write_text(json.dumps({"captions": vid.get("captions", True), "hotCaptions": bool(vid.get("hotCaptions")),
+                                                        "hot": hot, "music": bool(vid.get("music")), "grain": grain}))
+    if hot: print("hot words:", " ".join("%s:%s" % (l, w) for l, w in hot_labels(st, hot)))
     (d / "src" / "channel.json").write_text(json.dumps({k: ch[k] for k in ("name", "tagline", "avatar")}, ensure_ascii=False))
     imgs = [p for p in sorted((st.dir / "src").glob("*")) if p.suffix.lower() in IMG] if (st.dir / "src").exists() else []
     for p in imgs: shutil.copyfile(p, d / "public" / p.name)
@@ -102,7 +156,9 @@ def sheet(mp4, out, times, cols=6, w=270):
     """Frames at `times` tiled left to right, top to bottom -> out (jpg). No burned-in labels (Homebrew
     ffmpeg has no drawtext), so the caller prints the times in tile order."""
     cmd = ["ffmpeg", "-v", "error", "-y"]
-    for t in times: cmd += ["-ss", "%.3f" % t, "-i", str(mp4)]
+    # a negative time counts back from the end of the file (-0.05 = the last frame): `-ss <last frame time>` can seek past
+    # the final frame, give no frame, and crash the xstack with ffmpeg exit 234
+    for t in times: cmd += (["-sseof", "%.3f" % t] if t < 0 else ["-ss", "%.3f" % t]) + ["-i", str(mp4)]
     fc = ";".join("[%d:v]trim=end_frame=1,scale=%d:-2[v%d]" % (i, w, i) for i in range(len(times)))
     rows = (len(times) + cols - 1) // cols; pad = rows * cols - len(times)
     if pad:
@@ -118,8 +174,8 @@ def loop_ssim(mp4, last):
     """SSIM of frame 0 vs the last frame above the caption band (1.0 = seamless loop); None if ffmpeg gives no number.
     The crop scales with the frame, and a second try seeks slightly earlier in case the last frame can't be decoded."""
     crop = "crop=iw:ih*%d/1920:0:0" % CAPTION_TOP
-    for seek in (last, max(last - 0.05, 0)):
-        ss = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(mp4), "-ss", str(seek), "-i", str(mp4), "-filter_complex",
+    for seek in (["-sseof", "-0.05"], ["-ss", str(max(last - 0.05, 0))]):
+        ss = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(mp4)] + seek + ["-i", str(mp4), "-filter_complex",
                              "[0:v]trim=end_frame=1,%s[a];[1:v]trim=end_frame=1,%s[b];[a][b]ssim" % (crop, crop), "-f", "null", "-"],
                             capture_output=True, text=True).stderr
         m = re.search(r"All:\s*([\d.]+|inf)", ss)
@@ -138,9 +194,7 @@ def check(st, a, mp4=None):
     if a.at:
         sheet(mp4, out / ("%s_at.jpg" % tag), [float(x) for x in a.at], cols=min(6, len(a.at)), w=360)
     loop = out / ("%s_loop.jpg" % tag)
-    sheet(mp4, loop, [0, last], cols=2, w=360)
-    if not loop.exists():   # seeking exactly to the last frame can yield no frame (ffmpeg still exits 0): retry slightly earlier
-        sheet(mp4, loop, [0, max(last - 0.05, 0)], cols=2, w=360)
+    sheet(mp4, loop, [0, -0.05], cols=2, w=360)
     ln = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(mp4), "-af", "loudnorm=print_format=json", "-f", "null", "-"],
                         capture_output=True, text=True).stderr
     j = json.loads(ln[ln.rindex("{"):ln.rindex("}") + 1])
@@ -163,19 +217,51 @@ def still(st, a):
         run(["npx", "remotion", "still", "src/index.ts", "Short", os.path.relpath(out / ("still_%s.png" % t), d), "--frame=%d" % f], cwd=d)  # relative: remotion cuts absolute paths at a space
 
 
+def sfx_check(st, d):
+    """Warn (never drop) when a sound effect's PEAK lands on a HOT caption word: an sfx on the key word hides it. Needs the
+    story's hotCaptions; finds the <Sfx at src> elements by running Scene.Overlays at many times (sfxprobe.mjs, esbuild from
+    the Short's node_modules). A scene it can't probe is skipped with a note."""
+    if not st.data.get("video", {}).get("hotCaptions"): return
+    probe = PLUGIN / "scripts" / "sfxprobe.mjs"
+    try: r = subprocess.run(["node", str(probe), str(d), str(duration(st.p(st.data["narration"]["audio"])))], capture_output=True, text=True, timeout=90)
+    except subprocess.TimeoutExpired:
+        print("sfx check skipped: probing the scene timed out"); return
+    try: cues = json.loads(r.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        print("sfx check skipped: could not read the scene's Sfx times (%s)" % (r.stderr.strip().splitlines() or ["no output"])[-1][:160]); return
+    import wave
+    hot = set(map(tuple, json.loads((d / "src" / "options.json").read_text()).get("hot", []))); wl = _words(st); bad = 0
+    def peak(src):
+        try:
+            with wave.open(str(d / "public" / "sfx" / ("%s.wav" % src))) as w:
+                raw = w.readframes(w.getnframes()); sr = w.getframerate()
+            vals = [abs(int.from_bytes(raw[i:i + 2], "little", signed=True)) for i in range(0, len(raw) - 1, 2 * 8)]
+            return vals.index(max(vals)) * 8 / sr
+        except (OSError, ValueError, wave.Error): return 0.0
+    for c in cues:
+        pk = c["at"] + peak(c["src"])
+        for w in wl:
+            if (w["line"], w["i"]) in hot and w["start"] - 0.03 <= pk <= w["end"]:
+                bad += 1; print("WARN sfx %r at %.2f s peaks at %.2f s on the HOT word %r (%s, %.2f-%.2f s): move it before the word or after it" % (c["src"], c["at"], pk, w["w"], w["line"], w["start"], w["end"]))
+    print("sfx check: %d cue(s), %d on a hot word" % (len(cues), bad))
+
+
 def render(st, a):
     d = anim_dir(st)
     if not (d / "node_modules").exists(): sys.exit("no %s/node_modules: run anim.py init first" % d)
     sync(st)
+    import sfx as sfxlib
+    missing = [n for n in sfxlib.LIB if not (d / "public" / "sfx" / ("%s.wav" % n)).exists()]
+    if missing:   # first render, or a Short made before 0.8.0 that has not got the new sounds yet
+        print("sound effects missing in %s (%s): running sfx.py" % (d / "public" / "sfx", " ".join(missing[:6]) + (" ..." if len(missing) > 6 else "")))
+        run([sys.executable, PLUGIN / "scripts" / "sfx.py", st.path])
+    sfx_check(st, d)
     if a.frames:
         out = d / "out" / ("preview_%s.mp4" % a.frames)
         run(["npx", "remotion", "render", "src/index.ts", "Short", "out/preview_%s.mp4" % a.frames, "--frames=%s" % a.frames, "--muted"], cwd=d)
         print("preview:", out); return
     if st.rendered(): sys.exit("%s exists: versions only go up (the revise skill makes v%d)" % (st.mp4.name, st.version + 1))
     raw = d / "out" / ("raw_v%d.mp4" % st.version)
-    if not list((d / "public" / "sfx").glob("*.wav")):
-        print("no sound effects in %s: running sfx.py" % (d / "public" / "sfx"))
-        run([sys.executable, PLUGIN / "scripts" / "sfx.py", st.path])
     # relative output: Remotion runs in anim/ and has cut an absolute path at a space ("personal projects")
     run(["npx", "remotion", "render", "src/index.ts", "Short", "out/%s" % raw.name], cwd=d)
     if not raw.exists():
@@ -183,8 +269,20 @@ def render(st, a):
     st.build.mkdir(exist_ok=True)
     shutil.copyfile(d / "src" / "Scene.tsx", st.build / ("scene_v%d.tsx" % st.version))
     L = {"I": -14, "TP": -1.5, "LRA": 11, **st.data.get("audio", {}).get("loudness", {})}
-    run(["ffmpeg", "-v", "error", "-y", "-i", raw, "-af", "loudnorm=I=%s:TP=%s:LRA=%s" % (L["I"], L["TP"], L["LRA"]),
-         "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-shortest", "-movflags", "+faststart", st.mp4])
+    norm = "loudnorm=I=%s:TP=%s:LRA=%s" % (L["I"], L["TP"], L["LRA"])
+    out_opts = ["-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-shortest", "-movflags", "+faststart", st.mp4]
+    if st.data.get("video", {}).get("music"):
+        # music bed: synthesized once per Short, ducked by the narration (sidechain: the voice is the key), mixed with the
+        # raw render's own audio (narration + sfx), then loudnorm over everything so the file lands on -14 LUFS / TP -1.5
+        mus = d / "public" / "music.wav"; need = math.ceil(duration(raw)) + 1
+        if not mus.exists() or duration(mus) < need - 0.5:
+            run([sys.executable, PLUGIN / "scripts" / "sfx.py", st.path, "--music", "--seconds", need])
+        gain = float(st.data.get("video", {}).get("musicGain", 0.45))
+        fc = ("[1:a]volume=%g,afade=t=in:d=0.6,afade=t=out:st=%.2f:d=0.8[m];[m][2:a]sidechaincompress=threshold=0.02:ratio=10:attack=15:release=400:makeup=1[dk];"
+              "[0:a][dk]amix=inputs=2:duration=first:normalize=0,%s[a]") % (gain, duration(raw) - 0.8, norm)
+        run(["ffmpeg", "-v", "error", "-y", "-i", raw, "-i", mus, "-i", d / "public" / "narration.wav", "-filter_complex", fc, "-map", "0:v", "-map", "[a]"] + out_opts)
+    else:
+        run(["ffmpeg", "-v", "error", "-y", "-i", raw, "-af", norm] + out_opts)
     st.data.setdefault("anim", {})["render"] = {"raw": str(raw.relative_to(st.dir)), "mp4": st.mp4.name, "scene": "build/scene_v%d.tsx" % st.version,
                                                  "duration": round(duration(st.mp4), 2), "date": dt.date.today().isoformat()}
     st.save()

@@ -19,7 +19,7 @@ FACT RULES (strict)
 STYLE
 - Length: aim for 40-45 s (6-9 lines, about 120-135 words); hard max 60 s (about 175 words), never over. Seconds ≈ words ÷ 2.95.
   Use the extra room for bridges and context, not for more facts. One idea per line, max ~20 words a line.
-- Line 1 = a curious hook question about something familiar (may open "Socho..."). Twist by about 8 s.
+- Line 1 = a curious hook question about something familiar (may open "Socho..."); in myth-buster mode it is an accusation instead. Twist by about 8 s.
   Last line pays off and ideally echoes the hook so the video loops.
 - Every line leads into the next (a reason, a "but", a consequence). If a line can be removed without the story
   breaking, remove it. A line may only refer to things already said.
@@ -49,6 +49,29 @@ WHAT WORKED BEFORE (Short #1, "Why do we say hello on the phone?")
 - Cut as redundant: a second greeting that added nothing, an interpretation beat, a second proof of the same point.
 - Felt wrong: jokes in every line and invented drama ("he lost an argument"). One joke where it fits; each beat
   causes the next.
+
+MYTH-BUSTER MODE ("you're doing it wrong")
+Use it when the topic is a habit or belief many viewers practise and it is wrong or harmful (earbuds after a
+bath, brushing right after eating). If unsure, ask me. The viewer should feel "main ye galti kar raha hoon" and
+stay to the last word to learn the fix. Same length and fact rules; only the shape changes:
+accusation hook -> why it feels right -> twist -> stakes -> 1-2 short context lines or none -> bridge that
+opens the fix -> fix -> payoff that sends the viewer's hand back to the habit.
+- Hook (first 2 s) tells the viewer they are doing it now ("Ruko. Nahaane ke baad kaan mein earbud daalte ho?
+  Ye ek badi galti hai."), not a neutral question. The twist must pay it off by about 8 s.
+- One line says why it feels right (the sensation or belief), so the viewer sees themselves.
+- One stakes beat reframes the thing they think is harmless or helpful. A short analogy is fine ("kaan ka
+  bodyguard"); the claim under it must be VERIFIED.
+- Open loop: tease the fix before the middle ("iska jawab itna simple hai ki hans padoge") and pay it off only
+  in the last two beats. Context beats (history, price) get 1-2 lines or go.
+- The fix must be free, easy, specific and VERIFIED. No fix in verify.md = tell me, don't invent one.
+- Payoff is short and sends the hand back to the habit ("agli baar haath earbud ki taraf jaaye... ye video
+  yaad kar lena").
+- Drama comes from structure, not claims. Allowed: accusation, "ruko", contrast, short sentences, a pause before
+  the reveal, one CAPS word, an analogy. Not allowed: "doctors kehte hain" or "studies" unless verify.md says
+  it, invented danger or numbers, "99% log", "shock ho jaoge", harm beyond what verify.md says, anything the
+  video does not pay off.
+- Health topics: keep the doctor-advice line if verify.md supports it; never replace medical advice.
+Say "Mode: myth-buster" or "Mode: explainer" in one line above the table.
 
 STEP 1: BEATS TABLE (always first; no JSON yet)
 | # | Beat | Hinglish line | Leads into next because | Needs from earlier | Claim (verify.md #) |

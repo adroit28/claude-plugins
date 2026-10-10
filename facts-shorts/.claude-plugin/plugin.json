@@ -1,7 +1,7 @@
 {
   "name": "facts-shorts",
-  "version": "0.5.1",
-  "description": "Hinglish \"surprising story behind everyday things\" Shorts: topic ideas with a no-repeat ledger, fact research on a cheap Haiku subagent (opened pages, verbatim quotes, myths, Commons licences) judged into verify.md, a Roman-script Hinglish script with separate caption and spoken text, one free Gemini en-IN take with the fixed voice en-in-commercial-1 (no auditions), word timing from the take's pauses (no Whisper needed for Hinglish), a 2D Remotion explainer kit (optional captions, public-domain photo cards with name tags, speech bubbles, stamps, counters, emoji props, synthesized sound effects, an opening hook and a loop back to frame 0, like & subscribe card), metadata, revisions as new versions, a handoff prompt for a fresh session after each step, and the Claude cost after each step.",
+  "version": "0.8.0",
+  "description": "Hinglish \"surprising story behind everyday things\" Shorts: topic ideas with a no-repeat ledger, fact research on a cheap Haiku subagent (opened pages, verbatim quotes, myths, Commons licences) judged into verify.md, a Roman-script Hinglish script with separate caption and spoken text, one free Gemini en-IN take with the fixed voice en-in-commercial-1 (no auditions), word timing from the take's pauses (no Whisper needed for Hinglish), a 2D Remotion explainer kit with a 0.8 motion + sound kit (hot-word captions, ducked music bed, glitch/3D-title/calendar/transition/motion-blur/phone-screen effects, spring() motion, one opt-in three.js beat, more synthesized sfx; optional captions, public-domain photo cards with name tags, speech bubbles, stamps, counters, emoji props, synthesized sound effects, an opening hook and a loop back to frame 0, like & subscribe card), metadata, revisions as new versions, a handoff prompt for a fresh session after each step, and the Claude cost after each step.",
   "author": {
     "name": "adroit28"
   },

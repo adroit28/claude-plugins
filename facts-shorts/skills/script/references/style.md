@@ -10,7 +10,7 @@ this file is the writing guide. When the two disagree, channel.json wins.
 - **Shape:** hook question → twist → payoff. 5–8 lines, one idea per line, and every line must lead
   into the next (a reason, a "but", a consequence). If a line could be removed without the story
   breaking, remove it.
-- **Hook (line 1, first 2 s):** a why/how question about something familiar, said like you'd ask a
+- **Hook (line 1, first 2 s)** (myth-buster topics: see Myth-buster mode below): a why/how question about something familiar, said like you'd ask a
   friend. It may open with a curious nudge ("Socho...") and the second line may tease ("Iska answer
   bahut interesting hai, kyunki..."). The twist must arrive by about 8 s.
 - **Payoff (last line):** short, lands the twist, ideally echoes the hook so the loop back to the
@@ -34,6 +34,38 @@ this file is the writing guide. When the two disagree, channel.json wins.
 - Not gimmicky: no fake shock promises ("ye sunke shock ho jaoge", "99% log nahi jaante", "dimaag hil
   jayega"), no invented drama ("he lost an argument"), no clickbait that the video doesn't pay off.
 - Not a lecture: no "aaj hum seekhenge", no list of dates, no news-reader voice.
+
+## Myth-buster mode ("you're doing it wrong")
+
+Use when the topic is a habit or belief many viewers practise and it is wrong or harmful (earbuds after a
+bath, brushing right after eating, cracking knuckles). Ask the user if the topic is borderline. The viewer
+should feel "main ye galti kar raha hoon" and stay to the last word to learn the fix. Same length, same
+facts rules; only the shape changes.
+
+Shape: accusation hook -> why it feels right -> twist -> stakes -> (1-2 short context lines or none) -> bridge
+that opens the fix -> fix -> payoff that sends the viewer's hand back to the habit.
+
+- **Hook (first 2 s):** tells the viewer they are doing it now ("Ruko. Nahaane ke baad kaan mein earbud
+  daalte ho? Ye ek badi galti hai."). Not a neutral why-question. Must be paid off by the twist inside ~8 s.
+- **Why it feels right:** one line naming the sensation or belief that keeps people doing it. Without it
+  the viewer thinks "main toh nahi karta" and swipes.
+- **Stakes:** one beat that reframes the thing they think is harmless or helpful (e.g. the wax is a
+  protector, removing it is the harm). A short analogy is fine ("kaan ka bodyguard"); the claim under it
+  must be VERIFIED.
+- **Open loop:** tease the fix before the middle ("iska jawab itna simple hai ki hans padoge") and pay it
+  off only in the last two beats. History/market/context beats get 1-2 lines or go, whichever keeps the
+  loop tight.
+- **Fix:** free, easy, specific, and VERIFIED. A myth-buster with no fix is just scary; find the fix or
+  pick another topic.
+- **Payoff:** short, lands the fix, sends the hand back to the habit ("agli baar haath earbud ki taraf
+  jaaye... ye video yaad kar lena").
+- **Drama comes from structure, not claims.** Allowed: accusation, "ruko", contrast, short sentences,
+  pauses before the reveal, one CAPS word, an analogy. Not allowed: attributing to "doctors"/"studies"
+  unless verify.md has that wording, invented danger or numbers, "99% log", "shock ho jaoge", anything the
+  video does not pay off. Do not claim harm beyond what verify.md says ("kaan ke parde ke kareeb" stays
+  as worded; no "behre ho jaoge" unless verified).
+- Health topics: end with the safe version of the fix, and keep "agar dard ya blockage ho toh doctor ko
+  dikhao" if verify.md supports it; never replace medical advice.
 
 ## Facts
 

@@ -1,7 +1,8 @@
 import React from "react";
 import { Audio, Easing, Img, interpolate, Sequence, staticFile } from "remotion";
 import { FPS } from "../timing";
-import { ramp, pop } from "./anim";
+import { ramp, pop, enter } from "./anim";
+import { Burst } from "./burst";
 import { STROKE } from "./overlays";
 import { fontReady } from "../fonts";
 import options from "../options.json";
@@ -71,9 +72,10 @@ export const Sway = ({ t, from, children, deg = 2, speed = 3 }: { t: number; fro
 // cropped: text on a cereal box or a poster stays readable), shrinks to fit the picture band
 // and is centred in it; pass `h` only to crop on purpose (a face), with `pos` as the
 // object-position. Children (a NameTag, a Bubble) are positioned relative to the card.
-export const Card = ({ src, t, a, b, from = "right", w: w0 = 960, h: h0, top: top0, pos = "50% 20%", tilt = 0, slam, sepia = 0.25, fit = "cover", kb = 0.06, drift = 0, punch = [], children }: {
+export const Card = ({ src, t, a, b, from = "right", w: w0 = 960, h: h0, top: top0, pos = "50% 20%", tilt = 0, slam, sepia = 0.25, fit = "cover", kb = 0.06, drift = 0, punch = [], flip, children }: {
   src: string; t: number; a: number; b: number; from?: "left" | "right" | "zoom"; w?: number; h?: number; top?: number;
   pos?: string; tilt?: number; slam?: boolean; sepia?: number; fit?: "cover" | "contain"; children?: React.ReactNode;
+  flip?: "y" | "x";  // 3D flip-in instead of the slide: the card turns up from edge-on (perspective rotateY / rotateX) and settles with a small overshoot
   kb?: number; drift?: number; punch?: number[];  // slow push-in end (0.06 = 6 %), sideways drift in px (kept inside the photo), fast +8 % pushes on word times
 }) => {
   if (!vis(t, a - 0.01, b + 0.3)) return null;
@@ -84,7 +86,7 @@ export const Card = ({ src, t, a, b, from = "right", w: w0 = 960, h: h0, top: to
   const top = top0 ?? PIC_TOP + Math.max(0, (band - h) / 2);
   const k = ramp(t, a, a + 0.35, 0, 1, back);
   const out = ramp(t, b, b + 0.3);
-  const dx = from === "zoom" ? 0 : (from === "left" ? -1 : 1) * 1200 * (1 - k);
+  const dx = from === "zoom" || flip ? 0 : (from === "left" ? -1 : 1) * 1200 * (1 - k);
   const s = from === "zoom" || slam ? interpolate(t - a, [0, 0.18, 0.32], [1.6, 0.96, 1], clamp) : 1;
   const pn = punch.reduce((m, q) => Math.max(m, 0.08 * Math.max(0, Math.min(1, (t - q) / 0.08)) * (1 - Math.max(0, Math.min(1, (t - q - 0.18) / 0.5)))), 0);
   const kbs = 1 + kb * ramp(t, a, b, 0, 1, Easing.linear) + pn;
@@ -92,7 +94,7 @@ export const Card = ({ src, t, a, b, from = "right", w: w0 = 960, h: h0, top: to
   const dxi = Math.max(-room, Math.min(room, drift * ramp(t, a, b, -0.5, 0.5, Easing.linear)));
   return (
     <div style={{ position: "absolute", left: 540 - w / 2, top, width: w, height: h, opacity: 1 - out,
-      transform: `translateX(${dx - out * 300}px) scale(${s}) rotate(${tilt}deg)` }}>
+      transform: `${flip ? `perspective(1600px) rotate${flip === "x" ? "X" : "Y"}(${(1 - k) * (flip === "x" ? 75 : -80)}deg) ` : ""}translateX(${dx - out * 300}px) scale(${s}) rotate(${tilt}deg)` }}>
       <div style={{ width: "100%", height: "100%", overflow: "hidden", borderRadius: 18, border: `14px solid ${PAPER}`,
         boxShadow: "0 30px 70px rgba(0,0,0,.6)", background: PAPER }}>
         <Img src={staticFile(src)} style={{ width: "100%", height: "100%", objectFit: fit, objectPosition: pos,
@@ -174,20 +176,24 @@ export const NameTag = ({ t, a, name, sub }: { t: number; a: number; name: strin
 
 // Rubber stamp that slams down at `a` (pair with the "stamp" sfx). Optional `until` (s): fades out
 // there; without it the stamp stays to the last frame, so give every stamp an `until`.
-export const Stamp = ({ t, a, text, top = 690, color = RED, size: size0 = 150, rot = -9, until }: {
+export const Stamp = ({ t, a, text, top = 690, color = RED, size: size0 = 150, rot = -9, until, burst }: {
   t: number; a: number; text: string; top?: number; color?: string; size?: number; rot?: number; until?: number;
+  burst?: boolean | string;  // particles fly out of the stamp as it lands (true = the stamp colour, or a colour)
 }) => {
   if (t < a) return null;
   const gone = until === undefined ? 0 : ramp(t, until, until + 0.3);
   if (gone >= 1) return null;
   const size = fitSize(text, "Anton", size0, W - 2 * EDGE - 2 * 36 - 2 * 14 - 40, 4);  // padding, border, tilt
   return (
-    <div style={{ position: "absolute", left: 0, right: 0, top, textAlign: "center", whiteSpace: "pre",
-      transform: `scale(${interpolate(t - a, [0, 0.12, 0.22], [2.4, 0.95, 1], clamp)}) rotate(${rot}deg)`,
-      opacity: until === undefined ? ramp(t, a, a + 0.06) : ramp(t, a, a + 0.06) * (1 - gone) }}>
-      <span style={{ fontFamily: "Anton", fontSize: size, color, border: `14px solid ${color}`, borderRadius: 18,
-        padding: "0 36px", background: "rgba(255,255,255,.85)", letterSpacing: 4 }}>{text}</span>
-    </div>
+    <>
+      <div style={{ position: "absolute", left: 0, right: 0, top, textAlign: "center", whiteSpace: "pre",
+        transform: `scale(${interpolate(t - a, [0, 0.12, 0.22], [2.4, 0.95, 1], clamp)}) rotate(${rot}deg)`,
+        opacity: until === undefined ? ramp(t, a, a + 0.06) : ramp(t, a, a + 0.06) * (1 - gone) }}>
+        <span style={{ fontFamily: "Anton", fontSize: size, color, border: `14px solid ${color}`, borderRadius: 18,
+          padding: "0 36px", background: "rgba(255,255,255,.85)", letterSpacing: 4 }}>{text}</span>
+      </div>
+      {burst && <Burst t={t} a={a + 0.12} x={540} y={top + size * 0.62} color={typeof burst === "string" ? burst : color} />}
+    </>
   );
 };
 
@@ -210,8 +216,8 @@ export const Badge = ({ t, a, text, x: x0 = 90, y = 240, bg = "#c4161c", size: s
 };
 
 // Emoji prop: pops in at `a`, optional wobble (a ringing bell) and grey-out + red slash (`crossAt`).
-export const Emoji = ({ t, a, char, x, y, size = 290, rot = 0, wobble = false, crossAt }: {
-  t: number; a: number; char: string; x: number; y: number; size?: number; rot?: number; wobble?: boolean; crossAt?: number;
+export const Emoji = ({ t, a, char, x, y, size = 290, rot = 0, wobble = false, crossAt, springy }: {
+  t: number; a: number; char: string; x: number; y: number; size?: number; rot?: number; wobble?: boolean; crossAt?: number; springy?: boolean;
 }) => {
   if (t < a) return null;
   const slash = crossAt === undefined ? 0 : ramp(t, crossAt, crossAt + 0.2, 0, 1, Easing.out(Easing.quad));
@@ -219,7 +225,7 @@ export const Emoji = ({ t, a, char, x, y, size = 290, rot = 0, wobble = false, c
   return (
     <div style={{ position: "absolute", left: x, top: y, width: size * 1.15, height: size * 1.15 }}>
       <div style={{ fontSize: size, lineHeight: 1, textAlign: "center", filter: `grayscale(${slash})`,
-        transform: `scale(${pop(t, a)}) rotate(${rot + wob}deg)` }}>{char}</div>
+        transform: `scale(${enter(t, a, springy)}) rotate(${rot + wob}deg)` }}>{char}</div>
       {slash > 0 && (
         <div style={{ position: "absolute", left: -10, top: size * 0.55, width: size * 1.25 * slash, height: 34, background: RED,
           borderRadius: 17, transform: "rotate(-40deg)", transformOrigin: "0 50%", boxShadow: "0 0 0 6px #fff" }} />
@@ -232,15 +238,15 @@ export const Emoji = ({ t, a, char, x, y, size = 290, rot = 0, wobble = false, c
 // band, popping in at `a`, gently floating, fading out at `b`. 700 px fills the band; an Emoji
 // at its default 290 is an accent beside a hero or a card, not a whole beat. Two objects
 // side by side: two Heroes with `x` 290 / 790 and size ~460. `crossAt`/`wobble` as on Emoji.
-export const Hero = ({ t, a, b, char, size = 700, x = 540, dy = 0, wobble = false, crossAt }: {
-  t: number; a: number; b: number; char: string; size?: number; x?: number; dy?: number; wobble?: boolean; crossAt?: number;
+export const Hero = ({ t, a, b, char, size = 700, x = 540, dy = 0, wobble = false, crossAt, springy }: {
+  t: number; a: number; b: number; char: string; size?: number; x?: number; dy?: number; wobble?: boolean; crossAt?: number; springy?: boolean;
 }) => {
   if (!vis(t, a, b + 0.3)) return null;
   const box = size * 1.15;
   const top = PIC_TOP + (picBottom() - PIC_TOP - box) / 2 + dy + 14 * Math.sin((t - a) * 2.4);
   return (
     <Layer opacity={1 - ramp(t, b, b + 0.3)}>
-      <Emoji t={t} a={a} char={char} x={x - box / 2} y={top} size={size} wobble={wobble} crossAt={crossAt} />
+      <Emoji t={t} a={a} char={char} x={x - box / 2} y={top} size={size} wobble={wobble} crossAt={crossAt} springy={springy} />
     </Layer>
   );
 };

@@ -7,15 +7,16 @@ Scene.tsx).
 ```
 anim/
   .npmrc                     registry=https://registry.npmjs.org/
-  package.json + lock        remotion, @remotion/cli 4.0.530, react 19 (no three.js)
+  package.json + lock        remotion, @remotion/cli 4.0.534, @remotion/lottie, @remotion/effects, @remotion/motion-blur, @remotion/three + three (only bundled when a Scene imports kit/hero3d), react 19
   public/                    fonts, narration.wav, src/ photos, sfx/*.wav  (anim.py sync, sfx.py)
   src/index.ts, Root.tsx     composition "Short", 1080x1920, 30 fps, DURATION_S from timing.ts
   src/Short.tsx              background + narration + <Overlays/> + Caption + SubscribeBadge
   src/timing.ts              word helpers and the Short's length
   src/words.json             narration.words (synced)      src/channel.json   name/tagline/avatar (synced)
   src/Scene.tsx              THE TOPIC: exports BACKGROUND (CSS) and Overlays({t})
-  src/kit/                   anim.ts, overlays.tsx, props.tsx, Outro.tsx, index.ts (barrel)
-  src/examples/hello-phone.tsx   Short #1's full scene (not imported)
+  src/kit/                   anim.ts, overlays.tsx, props.tsx, motion.tsx, lottie.tsx, world.tsx, burst.tsx, fx.tsx, phone.tsx, Outro.tsx, index.ts (barrel), hero3d.tsx (by path only)
+  src/lottie/                animated Noto emoji (sun, eye, nose, relieved, sneeze, zap) + CREDITS.md
+  src/examples/hello-phone.tsx   Short #1's full scene (not imported)   kit-0.8-demo.tsx   every 0.8 component once (not imported)
 ```
 
 ## timing.ts
@@ -36,12 +37,12 @@ check the frame.
 
 | Prop | Signature (main props) | Notes |
 |---|---|---|
-| `Card` | `src, t, a, b, from="right"\|"left"\|"zoom", w=960, h?, top?, pos, tilt, slam, sepia=.25, fit` + children | paper-framed photo; slides in at `a`, Ken Burns, slides out at `b`. Without `h`: the photo's own shape (from `src/images.json`), fitted to and centred in the picture band, nothing cropped. With `h`: cropped, `pos` = object-position (keep the face in) |
+| `Card` | `src, t, a, b, from="right"\|"left"\|"zoom", w=960, h?, top?, pos, tilt, slam, sepia=.25, fit` + children | paper-framed photo; slides in at `a` (or `flip="y"\|"x"`: 3D flip-in, 0.8.0), Ken Burns, slides out at `b`. Without `h`: the photo's own shape (from `src/images.json`), fitted to and centred in the picture band, nothing cropped. With `h`: cropped, `pos` = object-position (keep the face in) |
 | `Pair` | `t, a, b, first: {src, tag?, sub?}, second: {...}, stagger=.25, gap=50` | two photos for one beat, stacked vertically, both uncropped and sized to fill the band; never put two Cards side by side |
 | `Hero` | `t, a, b, char, size=700, x=540, dy, wobble, crossAt?` | the main object of a beat with no photo, centred in the picture band and floating; two objects: `x` 290/790, size ~460 |
 | `NameTag` | `t, a, name, sub?` | yellow name bar at the bottom of a Card (child of Card) |
 | `Bubble` | `t, a, text, x, y, color, bg, size=120, tail="left"\|"right", rot` | x/y = centre, moved in so the bubble stays 40 px inside the frame; text shrinks to fit; only words someone actually said |
-| `Stamp` | `t, a, text, top=690, color, size=150, rot=-9, until?` | slams down; pair with `stamp` sfx; give every Stamp an `until` (s) or it stays to the last frame |
+| `Stamp` | `t, a, text, top=690, color, size=150, rot=-9, until?, burst?` | slams down; pair with `stamp` sfx; give every Stamp an `until` (s) or it stays to the last frame; `burst` (true or a colour) throws particles as it lands |
 | `Badge` | `t, a, text, x=90, y=240, bg, size=130, rot=-8, until?` | year/label tag; give every Badge an `until` (s) or it stays to the last frame |
 | `Emoji` | `t, a, char, x, y, size=290, rot, wobble, crossAt?` | `crossAt`: greys out + red slash ("no bell needed") |
 | `CountUp` | `t, a, b, from, to, unit?, top=860, bar=true, show=a, until, decimals` | counts from word a to word b: span a whole phrase |
@@ -103,6 +104,34 @@ Use these to stop a Short feeling like a slideshow. Rule of thumb: every beat mo
 | `Dots from to` | 10x10 people-grid that fills across a phrase, with `n / 100` readout; only for an "x out of 100" number |
 | `Versus myth truth` | Top half myth, bottom half truth, gold divider wipes in |
 | `Swipe at` / `Flash at` | Gold wipe over a cut (start it at `lineStart - 0.22`, pair with whoosh); impact flash. Use sparingly: one swipe at the myth-to-truth turn, not every line |
+| `LottieEmoji` | `t, a, data, x, y, size=290, rot, crossAt?` | animated Noto emoji, same contract as `Emoji` (pops in at `a`, `crossAt` greys it out with a red slash), plays from `a` and loops. `data={LOTTIE.sun}`; bundled: `sun eye nose relieved sneeze zap` (🌞 👁️ 👃 😌 🤧 ⚡). Prefer it over `Emoji` whenever the emoji is bundled. CC BY 4.0: add "Animated emoji: Noto Emoji Animation by Google, CC BY 4.0." to the description |
+| `LightLeakCut at, seed, hue` | a colour wash over a cut, starts 0.3 s before `at` (the next beat's start), lasts 0.8 s, changes no timing; `seed` = shape, `hue` = colour in degrees. Pair with a whoosh; use at the story's turns (3-5 per Short) and keep it at the top level of `Overlays`, never inside a `Cam`. Replaces `Swipe` where a softer, more colourful cut fits |
 | `LiveBg` | Automatic in `Short.tsx`: drifting glows, dust, vignette. Scene may `export const BEATS = [secs]` so the glow kicks on story turns, or `export const LIVE_BG = false` |
 
 Keep emoji accents out of kinetic text (they overlap); put them below it and size them <= 220.
+
+## 0.8.0 motion + sound kit (all opt-in; an old scene renders exactly as before)
+
+Story options (the `video` block, written to `src/options.json` by `anim.py sync`): `hotCaptions: true`, `hot: [...]`, `music: true`, `musicGain`, `grain`, `captions: false`.
+
+| Component / option | Use and limits |
+|---|---|
+| `video.hotCaptions` | word-by-word captions, current word gold, HOT words (the CAPS words in each line's `tts`, or `video.hot: ["galti", "L3:dhakel", "L5:nahi#2"]`) big, red, tilted, one per chunk. Same band (y 1330). Write the script's CAPS only on the 1-2 words per line that carry the point. Render warns when an sfx peak lands on a HOT word: move the sfx before or after it |
+| `video.music: true` | synthesized 108 BPM bed ducked under the narration, -14 LUFS / TP -1.5 in the final mix. Off unless the user says yes. `musicGain` (default 0.45) if the bed is too loud/quiet. No music on a Short that is mostly silence-driven |
+| `Glitch t a b text sub` | RGB-split slam with scan lines for a myth reveal. One per Short. Pair with `glitch`/`scratch` sfx |
+| `Title3D t accent rest opacity sweeps` | extruded hook title, drawn settled from frame 0 and static (so the last frame still matches); light sweep at each time in `sweeps` (add `LAST_T - 0.9` for a second one). Drop-in for `Title` |
+| `Card flip="y"\|"x"` | 3D flip-in instead of the slide, for the key photo. Not on every card: 1-2 per Short |
+| `CalendarFlip t a b from to label steps until` | page-flip number from -> to across a phrase (a year); lands on `to` at `b`. Give it an `until` |
+| `Transition kind at dur color dir` | `whip` (hard turn, motion blur), `slide`, `iris` (closes on `x,y`), `flip`, `wipe`. A cut effect at a time; changes no timing; TOP LEVEL of `Overlays` (never inside Cam/Layer). **2-3 per Short, at the story's turns only**; pair with `whoosh`/`revwhoosh` |
+| `Blur a b kind layers lag` + `{(t) => ...}` | motion blur (`@remotion/motion-blur`: `trail` ghosts, `camera` shutter average) for a FAST move only (a sweep, flying germs), active only between a and b; children get the (lagged) time as a function argument, so use `tt` inside, not the outer `t`; no Sfx inside. Costs about layers x (camera: samples x) the render time of that subtree for those frames: wrap one prop, keep the window under ~1 s |
+| `springy` prop / `export const SPRINGY = true` | `Emoji`, `Hero`, `LottieEmoji`, `CalendarFlip`, `Notify` entrances (and `pop()` for the whole scene) use Remotion `spring()` instead of the classic curve. Use it in new scenes; leave it off to keep an old scene identical |
+| `Meter t a b to label sub icon until` | danger/level gauge filling across a phrase (yellow -> red, shakes near full). Give it an `until` |
+| `ChatBubbles t a msgs title until` | messages pop at their times (`[time, mine, text][]`); generic text only |
+| `Notify t a app title body icon until` | phone notification card dropping in; pair with `notify` sfx |
+| `ShareSheet t a sendAt friends tickAt until` | ending CTA ("share with the friend who does this"): contacts ticked, SEND fires at `sendAt`; must finish before the outro card (OUTRO_AT) |
+| `Confetti t a`, `Burst`, `Stamp burst` | particles for a win or a landing; once or twice per Short |
+| `Hero3D` + `EarCanal3D` (`import ... from "./kit/hero3d"`) | **at most one opt-in 3D beat per Short**, 2-4 s, at the key beat; a transparent three.js canvas in the picture band driven by `t`; captions/text stay 2D. Adds ~30-60 s render time. Build another subject by copying `EarCanal3D` |
+| `video.grain` | film grain over everything. **Off by default**: noise doesn't compress and can double the file size. If on, `true` = 0.06, never above 0.08 |
+
+New sfx (sfx.py): boom revwhoosh glitch scratch sadbone boing notify kaching confetti shutter tick2. `sadbone` once per Short at most. Worked example of everything: `src/examples/kit-0.8-demo.tsx`.
+Animated emoji beyond the six bundled: candidates (with size) are in `src/lottie/CREDITS.md`; ask the user before downloading any.

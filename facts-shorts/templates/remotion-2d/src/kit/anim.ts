@@ -1,4 +1,4 @@
-import { Easing, interpolate } from "remotion";
+import { Easing, interpolate, spring } from "remotion";
 
 export const ease = Easing.inOut(Easing.cubic);
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -23,9 +23,26 @@ export const pulse = (t: number, a: number, up = 0.12, hold = 0.35, down = 0.4) 
 export const shown = (t: number, a: number, b: number, fadeIn = 0.3, fadeOut = 0.3) =>
   ramp(t, a, a + fadeIn) * (1 - ramp(t, b, b + fadeOut));
 
-// scale for a pop-in that overshoots and settles
-export const pop = (t: number, at: number, over = 0.3, from = 0.6, peak = 1.15) =>
+// Kit-level motion switch (0.8.0). A Scene opts in with `export const SPRINGY = true`; Short.tsx copies it here.
+// Off (default): the old eased pop below, so every earlier scene renders exactly as before.
+export const motion = { springy: false };
+
+// Entrance on Remotion's spring(): overshoots and settles, 0 before `at`. Only the scale curve is
+// different from `pop`; same signature so a component can pick either.
+export const springPop = (t: number, at: number, from = 0.6, config = { damping: 9, stiffness: 150, mass: 0.6 }) =>
+  t < at ? from : from + (1 - from) * spring({ frame: (t - at) * 30, fps: 30, config });
+
+// scale for a pop-in that overshoots and settles (the classic curve)
+export const popClassic = (t: number, at: number, over = 0.3, from = 0.6, peak = 1.15) =>
   interpolate(t - at, [0, 0.1, Math.max(over, 0.101)], [from, peak, 1], { ...clamp, easing: Easing.out(Easing.quad) });
+
+// the kit's default entrance: classic, or spring() when the Scene exports SPRINGY = true
+export const pop = (t: number, at: number, over = 0.3, from = 0.6, peak = 1.15) =>
+  motion.springy ? springPop(t, at, from) : popClassic(t, at, over, from, peak);
+
+// per-component choice: springy true = spring(), false = classic, undefined = the kit default
+export const enter = (t: number, at: number, springy?: boolean) =>
+  springy === undefined ? pop(t, at) : springy ? springPop(t, at) : popClassic(t, at);
 
 // Loop correction: raw(t) plus a smooth offset from `from` to `to`, so the value at `to`
 // lands on raw(0) + a whole number of `step`s. With step = the object's symmetry (2π/5 for a
