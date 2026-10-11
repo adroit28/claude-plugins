@@ -135,3 +135,15 @@ Story options (the `video` block, written to `src/options.json` by `anim.py sync
 
 New sfx (sfx.py): boom revwhoosh glitch scratch sadbone boing notify kaching confetti shutter tick2. `sadbone` once per Short at most. Worked example of everything: `src/examples/kit-0.8-demo.tsx`.
 Animated emoji beyond the six bundled: candidates (with size) are in `src/lottie/CREDITS.md`; ask the user before downloading any.
+
+## 0.9.0 dynamic kit (opt-in; `kit/cinema.tsx`, `kit/audio.tsx`; rules and recipes in `dynamic.md`)
+
+| Component | Use and limits |
+|---|---|
+| `CamPhoto t src aspect keys sweep flares punch settle` | a photo that is FILMED: card wider than the view so the camera tilts along it (`v` 0 = top, 1 = bottom), push (`s`), pan (`x`), roll (needs `s` >= 1.1), a faster foreground strip, wisps, dust, pulsing flares (percent coords), a light sweep up the subject (`sweep=[a,b]`), +12 % punches on word times. `settle=[OUTRO_AT, 1.0]` eases the camera back to `keys[0]` so the last frame matches frame 0. Photo `aspect` = height / width |
+| `SlotCounter t a hot boom` + `slotTicks(a)` | a digit that flips through `digits` (default 1-2-3) `laps` times, slows to a stop on the last one, glows red at `hot`, swells and vanishes at `boom` (add `Burst` + `Confetti` + `Flash`). Put a `tick` sfx at each `slotTicks` time and a `riser` that ends at `boom` |
+| `rigTransform(rig, p)` | one camera for many layers: `{ z, k, travel, ax, ay, fx, fy }` -> `{ css, project(x, y) }`; give each layer a parallax factor p (sun 0.08, far 0.22, mid 0.55, hero 1, clouds 1.2, foreground 1.3); the layer div needs `transformOrigin: "0 0"` |
+| `Bed src at b vol(t)` | an ambience bed (`wind`, `air`, `hum`...) whose volume is a function of time: drive it from the same variable as the picture. Peak 0.10-0.25 |
+| `Cloud`, `Stars`, `Wisps`, `Dust`, `mix`, `rnd`, `lerp` | ambient movers and helpers (`mix` takes hex or `rgb()`) |
+
+New sfx (sfx.py 0.9.0): `wind` (14 s, slow gusts), `air` (14 s), `hum` (8 s), `creak` (1.4 s), `rumble` (2.6 s). Worked example: `src/examples/burj-reel/` (one shared hero asset reused by a filmed-photo hook, a camera ride, a split screen, a wind beat and a hollow-void beat).

@@ -21,6 +21,8 @@ with <Sfx at={...} src="ring" vol={0.45} />. Re-running overwrites only these ge
   notify    phone notification chime, 0.7 s (Notify)           kaching    cash-register click + bell, 1.0 s
   confetti  confetti pop with chime, 0.9 s (Confetti)          shutter    camera shutter double click, 0.16 s
   tick2     tiny counter tick, 0.03 s
+  wind      14 s band-limited noise with slow gusts (bed; shape its volume per frame in the Scene)
+  air       14 s low open-sky bed;  creak 1.4 s groan;  rumble 2.6 s low drone;  hum 8 s warm steady bed
 
   sfx.py <story.vN.json | out dir> --music [--seconds 62]   writes music.wav, a 108 BPM A-minor bed (stdlib only,
   deterministic); anim.py render mixes it ducked under the narration when the story has "video": {"music": true}
@@ -62,6 +64,18 @@ LIB = {
     "confetti": ("aevalsrc='0.6*exp(-5*t)*(random(0)*2-1)+0.5*exp(-6*t)*(sin(2*PI*1760*t)+0.35*sin(2*PI*4858*t))':d=0.9:s=48000", "highpass=f=1200,lowpass=f=9000,volume=0.75"),
     "shutter": ("aevalsrc='if(lt(t,0.04),(random(0)*2-1)*exp(-90*t),if(lt(t,0.09),0,0.7*(random(0)*2-1)*exp(-60*(t-0.09))))':d=0.16:s=48000", "highpass=f=1500,volume=0.6"),
     "tick2": ("aevalsrc='0.6*exp(-90*t)*sin(2*PI*2400*t)':d=0.03:s=48000", None),
+    # 0.9.0 beds and textures (play them under the voice at low volume; a Scene can shape the volume per frame)
+    # wind: pink noise, band-limited, with slow overlapping gusts (no commas inside the expression: ffmpeg splits filters on them)
+    "wind": ("anoisesrc=d=14:c=pink:a=0.9:r=48000",
+             "highpass=f=110,lowpass=f=1500,volume='0.30+0.70*(0.5+0.5*sin(2*PI*0.17*t+1.3*sin(2*PI*0.043*t)))*(0.55+0.45*sin(2*PI*0.071*t+0.7))':eval=frame,afade=t=in:d=0.5,afade=t=out:st=13.4:d=0.6"),
+    # air: a quieter, lower bed for open sky
+    "air": ("anoisesrc=d=14:c=brown:a=0.9:r=48000", "lowpass=f=500,highpass=f=60,volume='0.55+0.45*sin(2*PI*0.09*t)':eval=frame,afade=t=in:d=0.6,afade=t=out:st=13.4:d=0.6"),
+    # creak: a wooden/steel groan, falling pitch with a wobble
+    "creak": ("aevalsrc='0.5*(2*mod((180-60*t/1.4+14*sin(2*PI*7*t))*t,1)-1)*sin(PI*t/1.4)*(0.6+0.4*sin(2*PI*23*t))':d=1.4:s=48000", "lowpass=f=900,highpass=f=70,afade=t=out:st=1.2:d=0.2"),
+    # rumble: a low structural drone
+    "rumble": ("aevalsrc='0.8*sin(2*PI*43*t)*sin(PI*t/2.6)+0.5*sin(2*PI*58*t+1)*sin(PI*t/2.6)':d=2.6:s=48000", "lowpass=f=140,volume=0.5"),
+    # hum: a steady warm/electric bed (heat haze, the empty void)
+    "hum": ("aevalsrc='0.4*sin(2*PI*110*t)+0.25*sin(2*PI*165*t+1)+0.15*sin(2*PI*220*t)':d=8:s=48000", "lowpass=f=600,afade=t=in:d=0.6,afade=t=out:st=7.4:d=0.6"),
 }
 
 

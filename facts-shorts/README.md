@@ -4,6 +4,8 @@ Narrated 40–45 s (max 60 s) YouTube Shorts in Hinglish (Roman script) about th
 everyday things: a verified story, a script that sounds like a friend telling a fun fact, a free
 AI voice, and a 2D animated explainer with real public-domain photos, built with Remotion.
 
+**Dynamic by default (0.9.0):** the video skill plans a visual hook in the first 3 s, continuous motion in every beat (camera, parallax, particles) and layered low-volume sound (beds 0.10-0.25, hits 0.20-0.35, voice about 8-12 LU above the effects). `anim.py check` reports the static seconds and the voice-vs-sfx balance. Rules and recipes: `skills/video/references/dynamic.md`; worked example: `templates/remotion-2d/src/examples/burj-reel/`.
+
 | Skill | What it does |
 |---|---|
 | `/facts-shorts:ideas` | Topic cards (hook question, twist, payoff, category, why Indian viewers care, myth to check) and a ledger, `IDEAS.md`, so a topic is never pitched or made twice. |

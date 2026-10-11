@@ -34,6 +34,10 @@ Numbered feedback in, the next version out, with proof. Nothing earlier is overw
 5. **Cost.** `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/cost.py --step "revise v<N+1>" --slug <slug>`.
 6. **Hand over.** `open` the new mp4. Per item: done / done differently (why) / not done (why), with seconds; new duration; any channel rule it now breaks (over 40 s etc., one line); the previous version kept; cost lines. Append to `notes.md` (version, date, feedback verbatim, changes, cost). If metadata depends on changed lines, suggest `/facts-shorts:metadata`.
 
+## Visual feedback ("static", "plain", "boring", "expected more")
+
+Treat it as a request for the whole **dynamic by default** standard, not a tweak: read `../video/references/dynamic.md`, run `anim.py check` on the old mp4 to list its STATIC SPANS and VOICE/SFX gap, then show a **storyboard v<N+1> table** (`| # | Time | What moves | Sound (peak volume) |`) per beat and WAIT for the user's OK before building. Rebuild in steps (hero asset on a contact sheet first, then one beat per step with a stills montage), stop after each step with its cost, render once at the end. Narration/script stay as they are unless the user says otherwise.
+
 ## Hard rules
 
 - Never overwrite an earlier story, scene snapshot or mp4; versions only go up.

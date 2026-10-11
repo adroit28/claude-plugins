@@ -5,7 +5,7 @@
   anim.py sync   <story>                     narration -> public/narration.wav, words -> src/words.json,
                                              channel.json -> src/channel.json, src/ images -> public/ (sizes -> src/images.json)
   anim.py render <story> [--frames 0-120]    remotion render + loudnorm -> <slug>_vN.mp4, Scene.tsx snapshot, then check
-  anim.py still  <story> --at 3.2 7.5        single frames -> build/check/still_<t>.png (fast look at a moment)
+  anim.py still  <story> --at 3.2 7.5 [--montage]   single frames -> build/check/still_<t>.png (fast look at a moment)
   anim.py check  <story> [--at 3.2 7.5]      sheets of the mp4 + loudness + loop match
 
 init copies the template and keeps an existing src/Scene.tsx unless --force-scene. It writes a
@@ -22,6 +22,11 @@ I=-14:TP=-1.5:LRA=11, video stream copied, AAC 192k, +faststart.
 story's CAPS words hot; "hot": ["galti", "L3:dhakel", "L5:nahi#2"] overrides them) | "music": true (a synthesized bed,
 ducked under the narration, mixed in at render) | "grain": true or 0.02-0.08 (film grain, default off: it bloats the file).
 sync writes them to src/options.json; render also warns when an sfx peak lands on a HOT word (sfxprobe.mjs).
+
+0.9.0 checks (dynamic by default): `check` also prints (a) the VOICE vs SFX balance (raw render minus narration: voice LUFS, sfx LUFS, the gap in LU, the
+loudest sfx peak; warns when the gap is under 6 LU = sfx too loud, or over 18 LU = sfx so timid they add nothing) and (b) the STATIC SECONDS: spans where the
+picture above the caption band barely changes over 0.5 s (a beat that does not move). `still --at ... --montage` also writes build/check/still_montage.png
+(all the stills in one tile sheet, one Read instead of ten).
 
 check writes to build/check/: a 1 fps sheet of the whole Short, frames at --at times, the first
 and last frames side by side; prints duration, loudness, true peak, and the SSIM of frame 0 vs the
@@ -183,6 +188,52 @@ def loop_ssim(mp4, last):
     return None
 
 
+def mix_check(st, d):
+    """Voice vs sound effects, measured from the render: raw mp4 audio (narration + sfx) minus narration.wav = the sfx on their own.
+    Prints both loudnesses, the gap in LU and the loudest sfx peak. Level bands: ambience 0.10-0.25, hits 0.20-0.35 (gap about 8-12 LU)."""
+    raw = d / "out" / ("raw_v%d.mp4" % st.version); voice = d / "public" / "narration.wav"
+    if not raw.exists() or not voice.exists(): return
+    tmp = d / "out" / "mixcheck"; tmp.mkdir(parents=True, exist_ok=True)
+    mix, vo, sf = tmp / "mix.wav", tmp / "voice.wav", tmp / "sfx.wav"
+    run(["ffmpeg", "-v", "error", "-y", "-i", raw, "-vn", "-ac", "1", "-ar", "48000", mix], quiet=True)
+    run(["ffmpeg", "-v", "error", "-y", "-i", voice, "-ac", "1", "-ar", "48000", vo], quiet=True)
+    run(["ffmpeg", "-v", "error", "-y", "-i", mix, "-i", vo, "-filter_complex", "[1:a]volume=-1[n];[0:a][n]amix=inputs=2:duration=first:normalize=0", sf], quiet=True)
+    def lufs(f):
+        e = subprocess.run(["ffmpeg", "-nostats", "-i", str(f), "-af", "ebur128=peak=true", "-f", "null", "-"], capture_output=True, text=True).stderr
+        m = re.search(r"Summary:.*?I:\s+(-?[\d.]+) LUFS", e, re.S); return float(m.group(1)) if m else None
+    def peak(f):
+        e = subprocess.run(["ffmpeg", "-nostats", "-i", str(f), "-af", "volumedetect", "-f", "null", "-"], capture_output=True, text=True).stderr
+        m = re.search(r"max_volume: (-?[\d.]+) dB", e); return float(m.group(1)) if m else None
+    v, x, pk = lufs(vo), lufs(sf), peak(sf)
+    if v is None or x is None: print("voice/sfx balance: could not be measured"); return
+    gap = v - x
+    print("voice %.1f LUFS · sfx %.1f LUFS · gap %.1f LU · loudest sfx peak %s dB (before loudnorm)" % (v, x, gap, pk))
+    if gap < 6: print("WARN: sfx are only %.1f LU under the voice: lower the loudest beds/hits (bands: ambience 0.10-0.25, hits 0.20-0.35) so every spoken word stays clear" % gap)
+    elif gap > 18: print("WARN: sfx are %.1f LU under the voice: they are barely audible; add whooshes on moves, risers into reveals, ticks on counters, a bed under each setting" % gap)
+
+
+def motion_check(mp4, dur, crop_h=CAPTION_TOP, win=0.5, thr=0.975):
+    """The picture above the caption band should keep moving. SSIM between the frame at t and at t + win for t every 0.5 s; spans where it is
+    above thr (almost identical) are static. Ignores the last 3 s (the subscribe card). Prints the spans (merged) or 'none'."""
+    crop = "crop=iw:ih*%d/1920:0:0,scale=270:-2" % crop_h
+    stats = mp4.parent / ("%s_motion.txt" % mp4.stem)
+    subprocess.run(["ffmpeg", "-hide_banner", "-v", "error", "-i", str(mp4), "-ss", str(win), "-i", str(mp4), "-filter_complex",
+                    "[0:v]fps=2,%s[a];[1:v]fps=2,%s[b];[a][b]ssim=stats_file=%s" % (crop, crop, stats), "-f", "null", "-"], capture_output=True, text=True)
+    if not stats.exists(): print("motion check: could not read frame stats"); return
+    vals = [float(m.group(1)) for m in (re.search(r"All:([\d.]+)", l) for l in stats.read_text().splitlines()) if m]
+    stats.unlink()
+    spans, cur = [], None
+    for i, v in enumerate(vals):
+        t = i * 0.5
+        if t > dur - 3.2: break
+        if v >= thr: cur = [t, t + win] if cur is None else [cur[0], t + win]
+        elif cur: spans.append(cur); cur = None
+    if cur: spans.append(cur)
+    spans = [s for s in spans if s[1] - s[0] >= 1.0]
+    print("static spans (>=1 s with almost no change above the caption band): %s" % (", ".join("%.1f-%.1f s" % tuple(s) for s in spans) if spans else "none"))
+    if spans: print("WARN: those seconds do not move. Dynamic by default: give each a camera push/parallax, drifting particles or a moving prop (references/dynamic.md)")
+
+
 def check(st, a, mp4=None):
     mp4 = mp4 or st.mp4
     if not mp4.exists(): sys.exit("no %s yet: run anim.py render" % mp4.name)
@@ -207,6 +258,9 @@ def check(st, a, mp4=None):
     try: lufs = float(j["input_i"])
     except ValueError: lufs = None
     if lufs is None or abs(lufs - target) > 2: print("WARN: loudness %s LUFS is more than 2 LU from the target %g" % (j["input_i"], target))
+    d = anim_dir(st)
+    mix_check(st, d)
+    motion_check(mp4, dur)
     print("sheets in %s (tiles left to right, top to bottom, times as listed above; Read them)" % out)
 
 
@@ -215,6 +269,15 @@ def still(st, a):
     for t in a.at or []:
         f = round(float(t) * 30)
         run(["npx", "remotion", "still", "src/index.ts", "Short", os.path.relpath(out / ("still_%s.png" % t), d), "--frame=%d" % f], cwd=d)  # relative: remotion cuts absolute paths at a space
+    if a.montage and a.at:
+        files = [out / ("still_%s.png" % t) for t in a.at]; cols = min(4, len(files)); w = 360; h = w * 16 // 9
+        fc = ";".join("[%d:v]scale=%d:%d[s%d]" % (i, w, h, i) for i in range(len(files)))
+        lay = "|".join("%d_%d" % ((i % cols) * w, (i // cols) * h) for i in range(len(files)))
+        fc += ";" + "".join("[s%d]" % i for i in range(len(files))) + ("xstack=inputs=%d:layout=%s[o]" % (len(files), lay) if len(files) > 1 else "null[o]")
+        cmd = ["ffmpeg", "-v", "error", "-y"]
+        for f_ in files: cmd += ["-i", str(f_)]
+        subprocess.run(cmd + ["-filter_complex", fc, "-map", "[o]", "-frames:v", "1", str(out / "still_montage.png")], check=True)
+        print("montage of %s (left to right, top to bottom): %s" % ("still_montage.png", " ".join(str(t) for t in a.at)))
 
 
 def sfx_check(st, d):
@@ -295,6 +358,7 @@ def main():
     ap.add_argument("cmd", choices=["init", "sync", "render", "still", "check"]); ap.add_argument("story")
     ap.add_argument("--force-scene", action="store_true"); ap.add_argument("--no-install", action="store_true")
     ap.add_argument("--frames", help="render a silent preview of this frame range (e.g. 0-120) and stop")
+    ap.add_argument("--montage", action="store_true", help="still: also tile all --at frames into build/check/still_montage.png")
     ap.add_argument("--at", nargs="*", help="times in seconds (check: extra frame sheet; still: frames to render)")
     a = ap.parse_args()
     st = Story(a.story)

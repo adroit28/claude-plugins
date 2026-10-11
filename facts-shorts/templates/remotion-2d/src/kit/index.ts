@@ -11,5 +11,7 @@ export * from "./world";
 export * from "./burst";
 export * from "./fx";
 export * from "./phone";
+export * from "./audio";    // 0.9.0: Bed (a sound bed with per-frame volume)
+export * from "./cinema";   // 0.9.0: rigTransform, CamPhoto, SlotCounter, Cloud/Stars/Wisps/Dust, mix/rnd/lerp
 // ./hero3d (the opt-in three.js beat) is deliberately not exported here: import it by path so three.js is bundled only when used.
 export * from "../timing";

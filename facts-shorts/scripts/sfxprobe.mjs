@@ -23,6 +23,8 @@ const walk = (n) => {
   if (!n || typeof n !== "object") return;
   if (Array.isArray(n)) return n.forEach(walk);
   if (n.type === Sfx) { const { at, src, vol } = n.props; found.set(at + ":" + src, { at, src, vol }); return; }
+  // 0.9.0: a Scene split into beat modules returns <Hook t/> <Fact1 t/> ...: call plain function components (hook-using ones throw and are skipped)
+  if (typeof n.type === "function") { try { walk(n.type(n.props || {})); } catch (e) {} return; }
   if (n.props && n.props.children) walk(n.props.children);
 };
 for (let t = 0; t <= ${dur} + 3.2; t += 0.1) { try { walk(Scene.Overlays({ t })); } catch (e) {} }
